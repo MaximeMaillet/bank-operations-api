@@ -1,6 +1,3 @@
-const csv = require('csv-parser')
-const fs = require('fs')
-const moment = require('moment');
 const persistOperations = require('./src/lib/persistOperations');
 const bankAccount = require('./src/lib/readBankAccount');
 const Sort = require('./src/lib/sort');
@@ -16,6 +13,6 @@ launch()
 
 async function launch() {
   const operations = await bankAccount.read('compte.csv', false);
-  // await persistOperations.run(operations);
+  await persistOperations.run(operations);
   Sort.byDate.show(operations);
 }
