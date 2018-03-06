@@ -16,6 +16,6 @@ launch()
 
 async function launch() {
   const operations = await bankAccount.read('compte.csv', false);
-  await persistOperations.run(operations);
+  // await persistOperations.run(operations);
   Sort.byDate.show(operations);
 }

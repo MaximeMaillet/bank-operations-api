@@ -35,24 +35,28 @@ module.exports.read = (file, copy) => {
         strict: false    // require column length match headers length
       }))
       .on('data', (data) => {
-        const arrayDate = data.date.replace(/\s/g, '').split('/');
-        if(arrayDate.length === 3) {
-          operations.push({
-            date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
-            label: data.libelle.replace(/\s/g, ''),
-            debit: data.debit ? parseFloat(data.debit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
-            credit: data.credit ? parseFloat(data.credit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
-            category: findCategory(categories, data.libelle.replace(/\s/g, '')),
-          });
+        if(data.date) {
+          const arrayDate = data.date.replace(/\s/g, '').split('/');
+          if(arrayDate.length === 3) {
+            operations.push({
+              date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
+              label: data.libelle.replace(/\s/g, ''),
+              debit: data.debit ? parseFloat(data.debit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
+              credit: data.credit ? parseFloat(data.credit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
+              category: findCategory(categories, data.libelle),
+            });
+          }
         }
       })
       .on('finish', () => {
-        missings = operations.filter((acc) => acc.reason === null).map((acc) => `${acc.date} : ${acc.libelle} - ${acc.debit}`);
+        missings = operations.filter((acc) => acc.category === null).map((acc) => `${acc.date} : ${acc.label} - ${acc.debit}`);
+        const realOperations = operations.filter((acc) => acc.category !== null);
+
         if(missings.length > 0) {
           console.log(`Missing labels : ${missings.length}`);
         }
-        console.log(`Reading ${operations.length} operations`);
-        resolve(operations);
+        console.log(`Reading ${realOperations.length} operations`);
+        resolve(realOperations);
       });
   });
 };
@@ -81,11 +85,24 @@ function loadCategory() {
 function findCategory(categories, label) {
   for(let i=0; i<categories.length; i++) {
     for(let j=0; j<categories[i].match.length; j++) {
-      if(label.match(categories[i].match[j])) {
+      if(label.replace(/\s/g, '').match(categories[i].match[j])) {
         return categories[i].label;
+      }
+    }
+    const {keywords} = categories[i];
+    if(keywords.length > 0) {
+      const arrayLabel = cleanLabel(label);
+      for(let j=0; j<arrayLabel.length; j++) {
+        if(categories[i].keywords.indexOf(arrayLabel[j]) !== -1) {
+          return categories[i].label;
+        }
       }
     }
   }
 
   return null;
+}
+
+function cleanLabel(label) {
+  return label.split(' ').map((str) => str.toLowerCase());
 }

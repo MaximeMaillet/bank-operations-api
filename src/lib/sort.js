@@ -37,6 +37,10 @@ function sortByDate(collection, _last) {
 }
 
 function showByDate(operations) {
+  if(operations.length === 0) {
+    console.log('No operations');
+    return;
+  }
   let total = 0;
   operations = sortByDate(operations);
   for(let i=0; i<operations.length; i++) {
