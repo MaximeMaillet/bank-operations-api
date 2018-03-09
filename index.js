@@ -1,4 +1,4 @@
-const persistOperations = require('./src/lib/persistOperations');
+const {persist, getOperations} = require('./src/lib/operations');
 const bankAccount = require('./src/lib/readBankAccount');
 const Sort = require('./src/lib/sort');
 
@@ -12,7 +12,7 @@ launch()
   });
 
 async function launch() {
-  const operations = await bankAccount.read('compte.csv', false);
-  await persistOperations.run(operations);
-  Sort.byDate.show(operations);
+  const operations = await bankAccount.read('compte.csv', true);
+  await persist(operations);
+  Sort.byDate.show((await getOperations()));
 }

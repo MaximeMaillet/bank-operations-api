@@ -36,13 +36,15 @@ module.exports.read = (file, copy) => {
       }))
       .on('data', (data) => {
         if(data.date) {
+          const credit = data.credit ? data.credit.replace(/\s/g, '').replace(/,/g, '.') : 0;
+          const debit = data.debit ? data.debit.replace(/\s/g, '').replace(/,/g, '.') : 0;
           const arrayDate = data.date.replace(/\s/g, '').split('/');
           if(arrayDate.length === 3) {
             operations.push({
               date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
               label: data.libelle.replace(/\s/g, ''),
-              debit: data.debit ? parseFloat(data.debit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
-              credit: data.credit ? parseFloat(data.credit.replace(/\s/g, '').replace(/,/g, '.')) : 0,
+              debit: debit ? parseFloat(debit) : 0,
+              credit: credit ? parseFloat(credit) : 0,
               category: findCategory(categories, data.libelle),
             });
           }
