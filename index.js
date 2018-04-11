@@ -15,4 +15,8 @@ async function launch() {
   const operations = await bankAccount.read('compte.csv', true);
   await persist(operations);
   Sort.byDate.show((await getOperations()));
+  const missings = bankAccount.getMissings();
+  if(missings.length > 0) {
+    console.log(missings);
+  }
 }
