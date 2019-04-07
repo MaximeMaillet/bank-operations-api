@@ -24,18 +24,15 @@ async function launch() {
   console.log(`Load ${csvFile}`);
   try {
     const operations = await bankAccount.read(csvFile, copyCSV);
-    console.log('Done');
-    console.log(operations);
+    await persist(operations);
+    Sort.byDate.show((await getOperations()));
+    const missings = bankAccount.getMissings();
+    if(missings.length > 0) {
+      console.log(missings);
+    }
+    return true;
   } catch(e) {
-    console.log('Done');
     console.log(e);
+    return false;
   }
-
-  // await persist(operations);
-  // Sort.byDate.show((await getOperations()));
-  // const missings = bankAccount.getMissings();
-  // if(missings.length > 0) {
-  //   console.log(missings);
-  // }
-  return true;
 }
