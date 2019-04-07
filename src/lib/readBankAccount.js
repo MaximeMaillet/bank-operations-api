@@ -10,39 +10,46 @@ let missings = [];
 const operations = [];
 let categories = [];
 
-module.exports.read = (file, copy) => {
-  return new Promise(async(resolve, reject) => {
-    console.log('Load category');
-    categories = await loadCategory();
-
-    if(copy) {
-      console.log('Start copy');
-      const newFile = `${process.env.STORAGE}/csv/${moment().format('YMMDD')}-${uuid()}.csv`;
-      const writer = fs.createWriteStream(newFile);
-      fs.createReadStream(file)
-        .pipe(writer)
-      ;
-
-      writer.on('finish', () => {
-        readFile(newFile)
-          .then((data) => {
-            resolve(data);
-          })
-          .catch((err) => {
-            reject(err);
-          })
-        ;
-      });
-    } else {
-      return readFile(file);
-    }
-  });
-};
-
 module.exports.getMissings = () => {
   return missings;
 };
 
+module.exports.read = async(file, shouldCopy) => {
+  console.log('Load category');
+  categories = await loadCategory();
+  let fileNameToRead = file;
+
+  if(shouldCopy) {
+    console.log('Start copy');
+    fileNameToRead = `${process.env.STORAGE}/_csv/${moment().format('YMMDD')}-${uuid()}.csv`;
+    await copy(file, fileNameToRead);
+  }
+
+  return readFile(fileNameToRead);
+};
+
+/**
+ * Copy file
+ * @param file
+ * @param newFile
+ * @return {Promise}
+ */
+function copy(file, newFile) {
+  return new Promise((resolve, reject) => {
+    fs.copyFile(file, newFile, (err) => {
+      if(err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Load category from DB
+ * @return {Promise}
+ */
 function loadCategory() {
   return new Promise((resolve, reject) => {
     mongoose.connect('mongodb://localhost/Banque');
@@ -95,22 +102,25 @@ function readFile(file) {
         quote: '"',     // specify optional quote character
         escape: '"',    // specify optional escape character (defaults to quote value)
         newline: '\n',  // specify a newline character
-        strict: false    // require column length match headers length
+        strict: false,    // require column length match headers length
+        headers: ['date', 'libelle', 'debit', 'credit']
       }))
       .on('data', (data) => {
-        if(data.date) {
+        const arrayDate = data.date.replace(/\s/g, '').split('/');
+        const date = new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`);
+
+        if(!isNaN(date.getTime())) {
           const credit = data.credit ? data.credit.replace(/\s/g, '').replace(/,/g, '.') : 0;
           const debit = data.debit ? data.debit.replace(/\s/g, '').replace(/,/g, '.') : 0;
-          const arrayDate = data.date.replace(/\s/g, '').split('/');
-          if(arrayDate.length === 3) {
-            operations.push({
-              date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
-              label: data.libelle.replace(/\s/g, ''),
-              debit: debit ? parseFloat(debit) : 0,
-              credit: credit ? parseFloat(credit) : 0,
-              category: findCategory(categories, data.libelle),
-            });
-          }
+          operations.push({
+            date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
+            label: data.libelle.replace(/\s/g, ''),
+            label_str: cleanLibelle(data.libelle),
+            debit: debit ? parseFloat(debit) : 0,
+            credit: credit ? parseFloat(credit) : 0,
+            category: findCategory(categories, data.libelle),
+            category_2: findCategory(categories, cleanLibelle(data.libelle)),
+          });
         }
       })
       .on('finish', () => {
@@ -128,4 +138,31 @@ function readFile(file) {
       })
     ;
   });
+}
+
+function cleanLibelle(str) {
+
+  const uselessWords = ['paiement', 'par', 'carte'];
+  const details = str.split(' ');
+  const arrayStr = [];
+  for(let i=0; i<details.length-1; i++) {
+    details[i] = details[i].replace(/\s/g, '');
+
+    if(!details[i] || details[i] === '') {
+      continue;
+    }
+
+    if(details[i].match(/[0-9]{2}\/[0-9]{2}/)) {
+      continue;
+    }
+
+    if(uselessWords.indexOf(details[i].toLowerCase()) !== -1) {
+      continue;
+    }
+
+    details[i] = details[i].replace(/\r?\n|\r/g, '');
+    arrayStr.push(details[i]);
+  }
+
+  return arrayStr.join(' ');
 }
