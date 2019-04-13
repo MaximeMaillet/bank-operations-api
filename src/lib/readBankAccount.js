@@ -1,72 +1,34 @@
 require('dotenv').config();
-const mongoose = require('mongoose');
 const fs = require('fs');
 const csv = require('csv-parser');
-const uuid = require('uuid/v1');
-const moment = require('moment');
 const {Label} = require('../models');
 
-let missings = [];
-const operations = [];
 let categories = [];
 
-module.exports.getMissings = () => {
-  return missings;
-};
-
-module.exports.read = async(file, shouldCopy) => {
-  console.log('Load category');
-  categories = await loadCategory();
-  let fileNameToRead = file;
-
-  if(shouldCopy) {
-    console.log('Start copy');
-    fileNameToRead = `${process.env.STORAGE}/_csv/${moment().format('YMMDD')}-${uuid()}.csv`;
-    await copy(file, fileNameToRead);
-  }
-
-  return readFile(fileNameToRead);
-};
-
 /**
- * Copy file
+ * Read CSV file
  * @param file
- * @param newFile
- * @return {Promise}
+ * @return {Promise<*|Promise<any>>}
  */
-function copy(file, newFile) {
-  return new Promise((resolve, reject) => {
-    fs.copyFile(file, newFile, (err) => {
-      if(err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
+module.exports.read = async(file) => {
+  categories = await loadCategory();
+  return readFile(file);
+};
 
 /**
  * Load category from DB
  * @return {Promise}
  */
 function loadCategory() {
-  return new Promise((resolve, reject) => {
-    mongoose.connect('mongodb://localhost/Banque');
-    const db = mongoose.connection;
-    db.on('error', (err) => reject(err));
-    db.once('open', () => {
-      Label.find({}, (err, res) => {
-        if(err) {
-          reject(err);
-        } else {
-          resolve(res);
-        }
-      });
-    });
-  });
+  return Label.find({});
 }
 
+/**
+ * Find category
+ * @param categories
+ * @param label
+ * @return {null|*}
+ */
 function findCategory(categories, label) {
   for(let i=0; i<categories.length; i++) {
     for(let j=0; j<categories[i].match.length; j++) {
@@ -88,6 +50,10 @@ function findCategory(categories, label) {
   return null;
 }
 
+/**
+ * @param label
+ * @return {string[]}
+ */
 function cleanLabel(label) {
   return label.split(' ').map((str) => str.toLowerCase());
 }
@@ -95,6 +61,7 @@ function cleanLabel(label) {
 function readFile(file) {
   return new Promise((resolve, reject) => {
     console.log(`Start reading on ${file}`);
+    const operations = [];
     fs.createReadStream(file)
       .pipe(csv({
         raw: false,     // do not decode to utf-8 strings
@@ -124,14 +91,12 @@ function readFile(file) {
         }
       })
       .on('finish', () => {
-        missings = operations.filter((acc) => acc.category === null).map((acc) => `${acc.date} : ${acc.label} - ${acc.debit}`);
-        const realOperations = operations.filter((acc) => acc.category !== null);
+        const missingOperations = operations
+          .filter((operation) => operation.category === null)
+          .map((operation) => `${operation.date} : ${operation.label} - ${operation.debit}`);
+        const verifiedOperations = operations.filter((operation) => operation.category !== null);
 
-        if(missings.length > 0) {
-          console.log(`Missing labels : ${missings.length}`);
-        }
-        console.log(`Reading ${realOperations.length} operations`);
-        resolve(realOperations);
+        resolve({missingOperations, verifiedOperations});
       })
       .on('error', (err) => {
         reject(err);

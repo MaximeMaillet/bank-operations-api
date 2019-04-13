@@ -1,58 +1,81 @@
 const mongoose = require('mongoose');
+const md5 = require('md5');
 const {Operation} = require('../models');
 
-function getOperations() {
-  return new Promise((resolve, reject) => {
-    mongoose.connect('mongodb://localhost/Banque');
-    const db = mongoose.connection;
-    db.on('error', (err) => reject(err));
-    db.once('open', () => {
-      console.log('Mongo connected');
-      Operation.find({})
-        .then((ope) => {
-          resolve(ope);
-        });
-    });
-  });
+module.exports = {
+  persist,
+  getOperations,
+  transform,
+  aggregateByCategoryByDate,
+  aggregateTotal,
+};
+
+/**
+ * Return operation for user
+ * @param user
+ * @return {Promise<*>}
+ */
+async function getOperations(user) {
+  const operations = await Operation.find({user: user.id}).lean().exec();
+  return operations.map((operation) => {
+    return transform(operation);
+  })
 }
 
-function persist(operations) {
-  return new Promise((resolve, reject) => {
-    console.log('Persist operations ...');
-    mongoose.connect('mongodb://localhost/Banque');
-    const db = mongoose.connection;
-    db.on('error', (err) => reject(err));
-    db.once('open', () => {
-      console.log('Mongo connected');
-      const opes = [];
-      for(let i=0; i<operations.length; i++) {
-        Operation.findOne({
-          label: operations[i].label,
-          date: operations[i].date,
-        }, (err, result) => {
-          if(err) {
-            console.log(err);
-          } else {
-            if(!result) {
-              opes.push(operations[i]);
-            }
-          }
-        });
-      }
+/**
+ * Persist many operations
+ * @param user
+ * @param operations
+ * @return {Promise}
+ */
+async function persist(user, operations) {
 
-      console.log('Waiting ...');
-      setTimeout(() => {
-        Operation.insertMany(opes)
-          .then(() => {
-            console.log(`${opes.length} documents persisted`);
-            resolve(opes);
-          })
-          .catch((err) => {
-            reject(err);
-          });
-      }, 1000);
-    });
-  });
+  const operationsExists = (await Operation.find({
+    hash: { $in: operations.map(operation => md5(operation.label+operation.date))},
+    user: user.id,
+  })
+    .lean()
+    .exec())
+    .map(operation => operation.hash);
+
+  const lastOperation = await Operation.findOne().sort({ id: 'desc' });
+  let id = 0;
+  if(lastOperation) {
+    id = lastOperation.id;
+  }
+
+  const operationsToSave = [];
+  for(const i in operations) {
+    const hash = md5(operations[i].label+operations[i].date);
+    if(operationsExists.indexOf(hash) === -1) {
+      id++;
+      operationsToSave.push({
+        ...(transform(operations[i])),
+        id,
+        hash,
+        user: user.id,
+      })
+    }
+  }
+
+  await Operation.insertMany(operationsToSave);
+  return operationsToSave.map(operation => transform(operation));
+}
+
+/**
+ * @param operation
+ * @return {{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string[]|string|*[])}}
+ */
+function transform(operation) {
+  return {
+    id: operation.id,
+    label_str: operation.label_str,
+    debit: operation.debit,
+    credit: operation.credit,
+    category: operation.category,
+    date: operation.date,
+    tags: operation.tags,
+  }
 }
 
 function aggregateTotal(from, to, matches) {
@@ -132,10 +155,3 @@ function doAggregateRequest(request) {
     });
   })
 }
-
-module.exports = {
-  persist,
-  getOperations,
-  aggregateByCategoryByDate,
-  aggregateTotal
-};
