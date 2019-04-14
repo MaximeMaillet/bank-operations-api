@@ -10,8 +10,9 @@ const app = express();
 router(app);
 router.enableDebug();
 
-mongoose.connect(`${process.env.MONGO_HOST}/Banque`);
+mongoose.connect(`${process.env.MONGO_HOST}/Banque`, { useNewUrlParser: true });
 const db = mongoose.connection;
+mongoose.set('useCreateIndex', true);
 autoIncrement.initialize(db);
 
 db.on('error', (err) => {
