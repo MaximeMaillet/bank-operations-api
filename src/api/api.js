@@ -40,8 +40,8 @@ db.once('open', () => {
 
   router.route([
     {
-      controllers: `${path.resolve('.')}/src/controllers`,
-      middlewares: `${path.resolve('.')}/src/middlewares`,
+      controllers: `${path.resolve('.')}/src/api/controllers`,
+      middlewares: `${path.resolve('.')}/src/api/middlewares`,
       routes: {
         '/': {
           get: (req, res) => {
