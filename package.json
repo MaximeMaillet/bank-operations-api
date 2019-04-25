@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node src/api/api.js",
     "fixtures": "node .data/fixtures/labels.js",
-    "api": "node src/api.js",
-    "api-dev": "nodemon src/api.js",
+    "api-dev": "nodemon src/api/api.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

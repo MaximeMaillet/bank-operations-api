@@ -12,10 +12,10 @@ services:
       - api
 
   front:
-    image: deuxmax/bank-front:latest
+    image: deuxmax/bank-operations-front:latest
 
   api:
-    image: deuxmax/bank-api:latest
+    image: deuxmax/bank-operations-api:latest
     depends_on:
       - mongo
     environment:

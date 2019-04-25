@@ -41,11 +41,10 @@ db.on('error', (err) => {
 db.once('open', () => {
   console.log('Mongoose connection OK');
 
-  const whitelist = ['http://localhost:8081', 'http://localhost:3000', 'http://bank.deuxmax.fr'];
+  const whitelist = ['http://localhost:8080', 'http://localhost:3000', 'http://bank.deuxmax.fr'];
   app.use(cors({
     origin: function (origin, callback) {
-      console.log(origin);
-      if (whitelist.indexOf(origin) !== -1) {
+      if (!origin || whitelist.indexOf(origin) !== -1) {
         callback(null, true)
       } else {
         callback(new Error('Not allowed by CORS'))

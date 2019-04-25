@@ -15,6 +15,11 @@ module.exports = {
 async function create(req, res, next) {
   try {
     const {username, password} = req.body;
+    if(!username || !password) {
+      return res.status(422).send({
+        message: 'You must provide an username and password'
+      });
+    }
     const hash = bcrypt.hashSync(username+password, 10);
     let user = await User.findOne({
       username,
