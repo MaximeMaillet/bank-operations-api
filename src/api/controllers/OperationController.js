@@ -74,7 +74,10 @@ async function _import(req, res, next) {
  */
 async function getFromUser(req, res, next) {
   try {
-    const operations = await getOperations(req.user);
+    const operations = await getOperations(req.user, {
+      page: req.query.page,
+      offset: req.query.offset,
+    });
 
     res.send(operations);
   } catch(e) {
@@ -104,6 +107,7 @@ async function getOne(req, res, next) {
  */
 async function updateOne(req, res, next) {
   try {
+    console.log('COCUCI')
     if(req.user.id !== req.bind.user) {
       return res.status(403).send({
         message: 'You don\'t have permission'
@@ -118,8 +122,9 @@ async function updateOne(req, res, next) {
     req.bind.category = category ? category : req.bind.category;
     req.bind.date = date ? date : req.bind.date;
     req.bind.save();
-    res.send(req.bind);
+    res.send(transform(req.bind));
   } catch(e) {
+    console.log(e);
     next(e);
   }
 }

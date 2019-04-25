@@ -52,7 +52,12 @@ async function create(req, res, next) {
 async function login(req, res, next) {
   try {
     const {username, password} = req.body;
-    const hash = bcrypt.hashSync(username+password, 10);
+    if(!username || !password) {
+      return res.status(422).send({
+        message: 'You must provide an username and password'
+      });
+    }
+
     const user = await User.findOne({
       username,
     });
@@ -63,8 +68,7 @@ async function login(req, res, next) {
       });
     }
 
-
-    if(!bcrypt.compareSync(username+password, hash)) {
+    if(!bcrypt.compareSync(username+password, user.password)) {
       return res.status(422).send({
         message: 'Password fail',
       });

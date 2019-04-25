@@ -13,13 +13,37 @@ module.exports = {
 /**
  * Return operation for user
  * @param user
+ * @param pagination
  * @return {Promise<*>}
  */
-async function getOperations(user) {
-  const operations = await Operation.find({user: user.id}).lean().exec();
-  return operations.map((operation) => {
-    return transform(operation);
-  })
+async function getOperations(user, pagination) {
+  pagination.page = pagination.page ? parseInt(pagination.page)-1 : 0;
+  pagination.offset = pagination.offset ? parseInt(pagination.offset) : 20;
+
+  const total = await Operation.countDocuments({user: user.id});
+  const lastPage = Math.floor(total/pagination.offset);
+  if(pagination.page < 0) {
+    pagination.page = 0;
+  }
+
+  const operations = await Operation
+    .find({user: user.id})
+    .sort({date: 'desc'})
+    .limit(pagination.offset)
+    .skip(pagination.page*pagination.offset)
+    .lean().exec();
+
+  return {
+    operations: operations.map((operation) => {
+      return transform(operation);
+    }),
+    pagination: {
+      total,
+      page: pagination.page+1,
+      pageSize: pagination.offset,
+      lastPage: lastPage+1,
+    }
+  };
 }
 
 /**

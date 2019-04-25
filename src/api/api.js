@@ -7,6 +7,7 @@ const path = require('path');
 const autoIncrement = require('mongoose-auto-increment');
 
 const app = express();
+const cors = require('cors');
 router(app);
 router.enableDebug();
 
@@ -21,17 +22,18 @@ db.on('error', (err) => {
 
   router.route([
     {
+      controllers: `${path.resolve('.')}/src/api/controllers`,
       routes: {
         '/': {
           get: (req, res) => {
-            res.send('API is not running');
+            res.send({message: 'API is not running'});
           }
         }
       }
     }
   ]);
 
-  app.listen(3000, () => {
+  app.listen(8081, () => {
     console.log('listening on port 3000!');
   });
 });
@@ -39,16 +41,24 @@ db.on('error', (err) => {
 db.once('open', () => {
   console.log('Mongoose connection OK');
 
+  const whitelist = ['http://localhost:8081', 'http://localhost:3000', 'http://bank.deuxmax.fr'];
+  app.use(cors({
+    origin: function (origin, callback) {
+      console.log(origin);
+      if (whitelist.indexOf(origin) !== -1) {
+        callback(null, true)
+      } else {
+        callback(new Error('Not allowed by CORS'))
+      }
+    },
+    allowedHeaders: ['Authorization', 'Content-Type', 'Origin', 'Referer', 'User-Agent', '*']
+  }));
+
   router.route([
     {
       controllers: `${path.resolve('.')}/src/api/controllers`,
       middlewares: `${path.resolve('.')}/src/api/middlewares`,
       routes: {
-        '/': {
-          get: (req, res) => {
-            res.send('is running');
-          }
-        },
         '/api': {
           '/users': {
             '_middleware_': [
@@ -118,7 +128,7 @@ db.once('open', () => {
     }
   ]);
 
-  app.listen(3000, () => {
-    console.log('listening on port 3000!');
+  app.listen(process.env.APP_PORT, () => {
+    console.log(`listening on port ${process.env.APP_PORT}`);
   });
 });
