@@ -41,7 +41,7 @@ db.on('error', (err) => {
 db.once('open', () => {
   console.log('Mongoose connection OK');
 
-  const whitelist = ['http://localhost:8080', 'http://localhost:3000', 'http://bank.deuxmax.fr'];
+  const whitelist = process.env.CORS_DOMAIN.split(',');
   app.use(cors({
     origin: function (origin, callback) {
       if (!origin || whitelist.indexOf(origin) !== -1) {
