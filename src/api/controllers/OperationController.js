@@ -1,5 +1,5 @@
 const bankAccount = require('../lib/readBankAccount');
-const {persist, getOperations, transform} = require('../lib/operations');
+const {persistMany, persist, getOperations, transform} = require('../lib/operations');
 const fs = require('fs');
 const path = require('path');
 
@@ -58,7 +58,7 @@ async function _import(req, res, next) {
           user: req.user.id,
         };
       });
-    const saved = await persist(req.user, operations);
+    const saved = await persistMany(req.user, operations);
     res.send(saved);
   } catch(e) {
     next(e);
@@ -129,18 +129,36 @@ async function updateOne(req, res, next) {
   }
 }
 
+/**
+ * @param req
+ * @param res
+ * @param next
+ * @returns {Promise<void>}
+ */
 async function addOne(req, res, next) {
   try {
     const {label, label_str, credit, debit, tags, date, category} = req.body;
-    const operation = await persist(req.user, [{
-      label,
-      label_str,
-      credit,
-      debit,
-      tags,
-      category,
-      date
-    }]);
+    let operation = {};
+    try {
+      operation = await persist(req.user, {
+        label,
+        label_str,
+        credit,
+        debit,
+        tags,
+        category,
+        date
+      });
+    } catch(e) {
+      console.error(e.message);
+      return res
+        .status(422)
+        .send({
+          message: 'Form is invalid',
+          errors: e
+        });
+    }
+
     res.send(operation);
   } catch(e) {
     next(e);

@@ -3,6 +3,7 @@ const md5 = require('md5');
 const {Operation} = require('../models');
 
 module.exports = {
+  persistMany,
   persist,
   getOperations,
   transform,
@@ -52,7 +53,7 @@ async function getOperations(user, pagination) {
  * @param operations
  * @return {Promise}
  */
-async function persist(user, operations) {
+async function persistMany(user, operations) {
 
   const operationsExists = (await Operation.find({
     hash: { $in: operations.map(operation => md5(operation.label+operation.date))},
@@ -87,13 +88,53 @@ async function persist(user, operations) {
 }
 
 /**
+ *
+ * @param user
+ * @param operation
+ * @returns {Promise<{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string)}|*>}
+ */
+async function persist(user, operation) {
+  const operationsExists = await Operation.findOne({
+    hash: md5(operation.label+operation.date),
+    user: user.id,
+  });
+
+  if(operationsExists) {
+    return transform(operationsExists);
+  }
+
+  if(!operation.label_raw) {
+    operation.label_raw = operation.label;
+  }
+
+  const ope = new Operation({
+    ...operation,
+    user: user.id,
+    hash: md5(operation.label_raw+operation.date),
+  });
+  const mongoValidate = ope.validateSync();
+  if(mongoValidate) {
+    const errors = [];
+    for(let i in mongoValidate.errors) {
+      errors.push({
+        field: i,
+        message: mongoValidate.errors[i].message,
+      });
+    }
+    throw errors;
+  }
+  await ope.save();
+  return transform(ope);
+}
+
+/**
  * @param operation
  * @return {{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string[]|string|*[])}}
  */
 function transform(operation) {
   return {
     id: operation.id,
-    label_str: operation.label_str,
+    label: operation.label,
     debit: operation.debit,
     credit: operation.credit,
     category: operation.category,

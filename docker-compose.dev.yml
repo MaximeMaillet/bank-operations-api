@@ -16,6 +16,7 @@ services:
       APP_PORT: 8080
       MONGO_HOST: mongodb://mongo:27017
       WAIT_HOSTS: mongo:27017
+      CORS_DOMAIN: ${CORS_DOMAIN}
     command: "npm run api-dev"
     links:
       - mongo
