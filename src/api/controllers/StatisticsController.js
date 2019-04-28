@@ -1,5 +1,6 @@
 const {getAggregateTotalRequest} = require('../lib/operations');
 const {Operation} = require('../models');
+const moment = require('moment');
 
 module.exports = {
 	getStats,
@@ -7,13 +8,21 @@ module.exports = {
 
 async function getStats(req, res, next) {
 	try {
-		const {from, to} = req.query;
+		let {from, to} = req.query;
+		if(!to) {
+			to = moment(req.user.lastOperationDate).format('YYYY-MM-DD[T]HH:mm:ss');
+		}
+
+		if(!from) {
+			from = moment(req.user.firstOperationDate).format('YYYY-MM-DD[T]HH:mm:ss')
+		}
+
 		const data = await Operation.aggregate([
 			{
 				$match: {
 					date: {
-						'$gte': new Date(from),
-						'$lt': new Date(to)
+						'$gte': moment(from).toDate(),
+						'$lt': moment(to).toDate()
 					}
 				}
 			},

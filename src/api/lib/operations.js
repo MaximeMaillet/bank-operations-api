@@ -16,21 +16,34 @@ module.exports = {
 /**
  * Return operation for user
  * @param user
+ * @param dates
  * @param pagination
  * @return {Promise<*>}
  */
-async function getOperations(user, pagination) {
-  pagination.page = pagination.page ? parseInt(pagination.page)-1 : 0;
+async function getOperations(user, {from, to}, pagination) {
+  pagination.page = !pagination.page ? 0 : parseInt(pagination.page) - 1;
   pagination.offset = pagination.offset ? parseInt(pagination.offset) : 20;
 
-  const total = await Operation.countDocuments({user: user.id});
+  const total = await Operation.countDocuments({
+    user: user.id,
+    date: {
+      '$gte': from,
+      '$lt': to,
+    }
+  });
   const lastPage = Math.floor(total/pagination.offset);
   if(pagination.page < 0) {
     pagination.page = 0;
   }
 
   const operations = await Operation
-    .find({user: user.id})
+    .find({
+      user: user.id,
+      date: {
+        '$gte': from,
+        '$lt': to,
+      }
+    })
     .sort({date: 'desc'})
     .limit(pagination.offset)
     .skip(pagination.page*pagination.offset)

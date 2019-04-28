@@ -75,6 +75,14 @@ async function _import(req, res, next) {
   }
 }
 
+async function sleep(m)  {
+  return new Promise((re) => {
+    setTimeout(() => {
+      re();
+    }, m)
+  })
+}
+
 /**
  * Get operations from user
  * @param req
@@ -84,22 +92,28 @@ async function _import(req, res, next) {
  */
 async function getFromUser(req, res, next) {
   try {
-    if(req.query.from || req.query.to) {
-      console.log('get');
-      console.log((new Date(req.query.from)));
-      console.log((new Date(req.query.to)));
-      const operations = await getOperationsFromDate(req.user, {
-        from: req.query.from,
-        to: req.query.to,
-      });
-
-      return res.send(operations);
+    let {from, to, page, offset} = req.query;
+    if(!to) {
+      to = moment(req.user.lastOperationDate).format('YYYY-MM-DD[T]HH:mm:ss');
     }
 
-    const operations = await getOperations(req.user, {
-      page: req.query.page,
-      offset: req.query.offset,
-    });
+    if(!from) {
+      from = moment(req.user.firstOperationDate).format('YYYY-MM-DD[T]HH:mm:ss')
+    }
+
+    if(!offset) {
+      offset = 20;
+    }
+
+    if(!page) {
+      page = 1;
+    }
+
+    console.log(req.user)
+    console.log(from)
+    console.log(to)
+
+    const operations = await getOperations(req.user, {from, to}, {page, offset});
 
     res.send(operations);
   } catch(e) {

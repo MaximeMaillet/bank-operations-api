@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const {User} = require('../models');
+const {User, Operation} = require('../models');
 
 module.exports = {
   auth,
@@ -20,10 +20,19 @@ async function auth(req, res, next) {
 
     const cert = fs.readFileSync(`${path.resolve('.')}/keys/auth.pub`);
     const decode = await jwt.verify(auth[1], cert, { algorithms: ['RS256'] });
-
-    req.user = await User.findOne({
+    const dbUser = await User.findOne({
       username: decode.data.username,
     });
+
+    const firstOperation = await Operation.findOne({user: dbUser.id}, {date: 1}).sort({date: 'asc'});
+    const lastOperation = await Operation.findOne({user: dbUser.id}, {date: 1}).sort({date: 'desc'});
+
+    req.user = {
+      id: dbUser.id,
+      username: dbUser.username,
+      firstOperationDate: firstOperation ? firstOperation.date : null,
+      lastOperationDate: lastOperation ? lastOperation.date : null
+    };
 
     next();
 
