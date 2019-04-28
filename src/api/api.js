@@ -109,6 +109,18 @@ db.once('open', () => {
                 get: 'OperationController#getOne',
                 delete: 'OperationController#deleteOne'
               }
+            },
+            '/categories': {
+              '_middleware_': {
+                controllers: ['authenticate#auth']
+              },
+              get: 'CategoryController#getFromUser'
+            },
+            '/statistics': {
+              '_middleware_': {
+                controllers: ['authenticate#auth']
+              },
+              get: 'StatisticsController#getStats'
             }
           },
         },

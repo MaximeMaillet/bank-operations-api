@@ -3,3 +3,4 @@ node_modules
 docker-compose.yml
 keys
 .data
+package-lock.json

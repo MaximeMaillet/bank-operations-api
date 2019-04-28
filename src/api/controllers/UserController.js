@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcrypt');
-const {User} = require('../models');
+const {User, Operation} = require('../models');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
@@ -69,24 +69,40 @@ async function login(req, res, next) {
 
     if(!user) {
       return res.status(422).send({
-        message: 'This user does not exists',
+        message: 'Unable to connect',
+        errors: [{
+          field: 'username',
+          message: 'This user does not exists'
+        }]
       });
     }
 
     if(!bcrypt.compareSync(username+password, user.password)) {
       return res.status(422).send({
-        message: 'Password fail',
+        message: 'Unable to connect',
+        errors: [{
+          field: 'password',
+          message: 'This password is uncorrect'
+        }]
       });
     }
 
     const privateKey = fs.readFileSync(`${path.resolve('.')}/keys/auth`);
+    const firstOperation = await Operation.findOne({user: user.id}).sort({date: 'asc'});
+    const lastOperation = await Operation.findOne({user: user.id}).sort({date: 'desc'});
+    const userData = {
+      username,
+      firstOperationDate: firstOperation ? firstOperation.date : null,
+      lastOperationDate: lastOperation ? lastOperation.date : null,
+    };
+
     const token = jwt.sign({
-      data: {username},
+      data: userData,
       exp: Math.floor(Date.now() / 1000) + (60 * 60),
     }, privateKey, { algorithm: 'RS256'});
 
     res.send({
-      username,
+      user: userData,
       token
     });
   } catch(e) {

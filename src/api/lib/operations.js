@@ -6,9 +6,11 @@ module.exports = {
   persistMany,
   persist,
   getOperations,
+  getOperationsFromDate,
   transform,
   aggregateByCategoryByDate,
   aggregateTotal,
+  getAggregateTotalRequest,
 };
 
 /**
@@ -47,6 +49,23 @@ async function getOperations(user, pagination) {
   };
 }
 
+async function getOperationsFromDate(user, {from, to}) {
+  const operations = await Operation
+    .find({
+      user: user.id,
+      date: {
+        '$gte': new Date(from),
+        '$lt': new Date(to)
+      }
+    })
+    .sort({date: 'desc'})
+    .lean().exec();
+
+  return operations.map((operation) => {
+    return transform(operation);
+  });
+}
+
 /**
  * Persist many operations
  * @param user
@@ -83,7 +102,9 @@ async function persistMany(user, operations) {
     }
   }
 
-  await Operation.insertMany(operationsToSave);
+  for(let i in operationsToSave) {
+    await persist(user, operationsToSave[i]);
+  }
   return operationsToSave.map(operation => transform(operation));
 }
 
@@ -143,10 +164,11 @@ function transform(operation) {
   }
 }
 
-function aggregateTotal(from, to, matches) {
-  const request = [
+function getAggregateTotalRequest(from, to, matches) {
+  return [
     {
       "$match": {
+        ...matches,
         "date": {
           "$gte": new Date(from),
           "$lt": new Date(to)
@@ -154,18 +176,22 @@ function aggregateTotal(from, to, matches) {
       }
     },
     {"$group" : {
-      "_id" : {"$dateFromParts": {"year": {"$year": "$date"}, "month": {"$month": "$date"}}},
-      "debit" : {"$sum" : "$debit"},
-      "credit": {"$sum" : "$credit"}
-    }},
+        "_id" : {"$dateFromParts": {"year": {"$year": "$date"}, "month": {"$month": "$date"}}},
+        "debit" : {"$sum" : "$debit"},
+        "credit": {"$sum" : "$credit"}
+      }},
     {"$project": {
-      "_id": 0,
-      "ts": "$_id",
-      "debit": 1,
-      "credit": 1
-    }},
+        "_id": 0,
+        "ts": "$_id",
+        "debit": 1,
+        "credit": 1
+      }},
     {"$sort": {"ts": 1}}
   ];
+}
+
+function aggregateTotal(from, to, matches) {
+  const request = getAggregateTotalRequest(from, to, matches);
 
   return doAggregateRequest(request);
 }
