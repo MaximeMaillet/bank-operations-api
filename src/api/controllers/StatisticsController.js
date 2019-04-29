@@ -20,6 +20,7 @@ async function getStats(req, res, next) {
 		const data = await Operation.aggregate([
 			{
 				$match: {
+					user: req.user.id,
 					date: {
 						'$gte': moment(from).toDate(),
 						'$lt': moment(to).toDate()

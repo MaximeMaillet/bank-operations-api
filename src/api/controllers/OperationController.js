@@ -79,7 +79,7 @@ async function sleep(m)  {
   return new Promise((re) => {
     setTimeout(() => {
       re();
-    }, m)
+    }, m);
   })
 }
 
@@ -93,12 +93,12 @@ async function sleep(m)  {
 async function getFromUser(req, res, next) {
   try {
     let {from, to, page, offset} = req.query;
-    if(!to) {
-      to = moment(req.user.lastOperationDate).format('YYYY-MM-DD[T]HH:mm:ss');
+    if(!to && req.user.lastOperationDate) {
+      to = moment(req.user.lastOperationDate).add(1, 'day').startOf('day').format('YYYY-MM-DD[T]HH:mm:ss');
     }
 
-    if(!from) {
-      from = moment(req.user.firstOperationDate).format('YYYY-MM-DD[T]HH:mm:ss')
+    if(!from && req.user.firstOperationDate) {
+      from = moment(req.user.firstOperationDate).startOf('day').format('YYYY-MM-DD[T]HH:mm:ss')
     }
 
     if(!offset) {
@@ -109,10 +109,9 @@ async function getFromUser(req, res, next) {
       page = 1;
     }
 
-    console.log(req.user)
+    console.log(req.user.lastOperationDate)
     console.log(from)
     console.log(to)
-
     const operations = await getOperations(req.user, {from, to}, {page, offset});
 
     res.send(operations);
