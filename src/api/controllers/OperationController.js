@@ -109,9 +109,6 @@ async function getFromUser(req, res, next) {
       page = 1;
     }
 
-    console.log(req.user.lastOperationDate)
-    console.log(from)
-    console.log(to)
     const operations = await getOperations(req.user, {from, to}, {page, offset});
 
     res.send(operations);

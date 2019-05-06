@@ -9,12 +9,13 @@ module.exports = {
 async function getStats(req, res, next) {
 	try {
 		let {from, to} = req.query;
-		if(!to) {
-			to = moment(req.user.lastOperationDate).format('YYYY-MM-DD[T]HH:mm:ss');
-		}
 
 		if(!from) {
-			from = moment(req.user.firstOperationDate).format('YYYY-MM-DD[T]HH:mm:ss')
+			from = moment(req.user.firstOperationDate).startOf('month').format('YYYY-MM-DD[T]HH:mm:ss')
+		}
+
+		if(!to) {
+			to = moment(req.user.lastOperationDate).add(1, 'months').startOf('month').format('YYYY-MM-DD[T]HH:mm:ss');
 		}
 
 		const data = await Operation.aggregate([
