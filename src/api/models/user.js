@@ -8,6 +8,6 @@ const userSchema = new Schema({
   password: String,
 });
 
-userSchema.plugin(autoIncrement.plugin, { model: 'Users', field: 'id' });
+userSchema.plugin(autoIncrement.plugin, { model: 'Users', field: 'id', startAt: 1});
 
 module.exports = userSchema;

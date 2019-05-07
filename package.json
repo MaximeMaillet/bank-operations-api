@@ -29,6 +29,8 @@
     "uuid": "^3.2.1"
   },
   "devDependencies": {
+    "babel-eslint": "^10.0.1",
+    "eslint": "^5.16.0",
     "nodemon": "^1.18.10"
   }
 }

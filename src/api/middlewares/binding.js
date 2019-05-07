@@ -1,4 +1,5 @@
-const {User, Operation} = require('../models');
+const {User, Operation, SubOperation} = require('../models');
+const {transform} = require('../lib/transformers');
 
 module.exports = {
   bindUser,
@@ -8,13 +9,19 @@ module.exports = {
 async function bindOperation(req, res, next) {
   try {
     const operation = await Operation.findOne({id: req.params.id});
+    const subOperations = await SubOperation.find({operation: req.params.id});
+
     if(!operation) {
       return res.status(404).send({
         message: 'This operation does not exists'
       });
     }
 
-    req.bind = operation;
+    req.bind = await transform(operation, 'Operation');
+    if(subOperations) {
+      req.bind.subs = await transform(subOperations, 'SubOperation');
+    }
+
     next();
   } catch(e) {
     res.status(422).send({

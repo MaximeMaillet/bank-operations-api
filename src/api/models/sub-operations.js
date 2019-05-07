@@ -1,9 +1,13 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const autoIncrement = require('mongoose-auto-increment');
 const moment = require('moment');
 
 const operationSchema = new Schema({
+  operation: {
+    type: Number,
+    ref: 'Operation',
+    required: [true, 'Operation is required'],
+  },
   date: {
     type: Date,
     required: [true, 'Date is required'],
@@ -14,28 +18,13 @@ const operationSchema = new Schema({
       message: props => 'Date is invalid'
     }
   },
-  hash: String,
-  id: { type: Number, default: 0 },
-  user: {
-    type: Number,
-    ref: 'User',
-    required: [true, 'User is required']
-  },
-  label_raw: String,
   label: {
     type: String,
     required: [true, 'Label is required'],
   },
   debit: Number,
   credit: Number,
-  category: {
-    type: String,
-    required: [true, 'Category is required']
-  },
   tags: [String],
-  subs: [{type: Number, ref: 'Operation',}]
 });
-
-operationSchema.plugin(autoIncrement.plugin, { model: 'Operations', field: 'id', startAt: 1 });
 
 module.exports = operationSchema;

@@ -43,11 +43,11 @@ db.once('open', () => {
 
   const whitelist = process.env.CORS_DOMAIN.split(',');
   app.use(cors({
-    origin: function (origin, callback) {
+    origin: function(origin, callback) {
       if (!origin || whitelist.indexOf(origin) !== -1) {
-        callback(null, true)
+        callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'))
+        callback(new Error('Not allowed by CORS'));
       }
     },
     allowedHeaders: ['Authorization', 'Content-Type', 'Origin', 'Referer', 'User-Agent', '*']
@@ -107,7 +107,13 @@ db.once('open', () => {
                 },
                 patch: 'OperationController#updateOne',
                 get: 'OperationController#getOne',
-                delete: 'OperationController#deleteOne'
+                delete: 'OperationController#deleteOne',
+                '/sub_operations': {
+                  _middleware_: {
+                    controllers: ['authenticate#auth', 'binding#bindOperation', bodyParser.json()]
+                  },
+                  post: 'SubOperationController#split'
+                }
               }
             },
             '/categories': {

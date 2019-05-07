@@ -1,8 +1,10 @@
 const bankAccount = require('../lib/readBankAccount');
-const {persistMany, persist, getOperations, getOperationsFromDate, transform} = require('../lib/operations');
+const {persistMany, persist, getOperations} = require('../lib/operations');
+const {transform} = require('../lib/transformers.js');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const {SubOperation} = require('../models/index');
 
 module.exports = {
   add,
@@ -57,7 +59,7 @@ async function _import(req, res, next) {
           field: 'json',
           message: 'File is required'
         }]
-      })
+      });
     }
 
     const operations = (JSON.parse(fs.readFileSync(`${path.resolve('.')}/${req.file.path}`)))
@@ -75,14 +77,6 @@ async function _import(req, res, next) {
   }
 }
 
-async function sleep(m)  {
-  return new Promise((re) => {
-    setTimeout(() => {
-      re();
-    }, m);
-  })
-}
-
 /**
  * Get operations from user
  * @param req
@@ -98,7 +92,7 @@ async function getFromUser(req, res, next) {
     }
 
     if(!from && req.user.firstOperationDate) {
-      from = moment(req.user.firstOperationDate).startOf('day').format('YYYY-MM-DD[T]HH:mm:ss')
+      from = moment(req.user.firstOperationDate).startOf('day').format('YYYY-MM-DD[T]HH:mm:ss');
     }
 
     if(!offset) {
@@ -125,7 +119,7 @@ async function getFromUser(req, res, next) {
  */
 async function getOne(req, res, next) {
   try {
-    res.send(transform(req.bind));
+    res.send((await transform(req.bind, 'Operation')));
   } catch(e) {
     next(e);
   }
@@ -142,7 +136,7 @@ async function updateOne(req, res, next) {
     if(req.user.id !== req.bind.user) {
       return res.status(403).send({
         message: 'You don\'t have permission'
-      })
+      });
     }
 
     const {label, credit, debit, tags, date, category} = req.body;
@@ -153,9 +147,8 @@ async function updateOne(req, res, next) {
     req.bind.category = category ? category : req.bind.category;
     req.bind.date = date ? moment(date) : moment(req.bind.date);
     req.bind.save();
-    res.send(transform(req.bind));
+    res.send((await transform(req.bind, 'Operation')));
   } catch(e) {
-    console.log(e);
     next(e);
   }
 }
@@ -206,7 +199,7 @@ async function deleteOne(req, res, next) {
     if(req.bind.user !== req.user.id) {
       return res.status(403).send({
         message: 'You don\'t have permission'
-      })
+      });
     }
 
     req.bind.remove();

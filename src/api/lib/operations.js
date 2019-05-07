@@ -1,16 +1,32 @@
 const mongoose = require('mongoose');
 const md5 = require('md5');
-const {Operation} = require('../models');
+const {Operation, SubOperation} = require('../models');
+const {transform} = require('./transformers');
 
 module.exports = {
   persistMany,
   persist,
   getOperations,
   getOperationsFromDate,
-  transform,
   aggregateByCategoryByDate,
   aggregateTotal,
   getAggregateTotalRequest,
+};
+
+const definePagination = async(query, page, offset) => {
+  const total = await Operation.countDocuments(query);
+
+  const lastPage = Math.floor(total/offset);
+  if(page < 0) {
+    page = 0;
+  }
+
+  return {
+    total,
+    page: page+1,
+    pageSize: offset,
+    lastPage: lastPage+1,
+  };
 };
 
 /**
@@ -20,45 +36,33 @@ module.exports = {
  * @param pagination
  * @return {Promise<*>}
  */
-async function getOperations(user, {from, to}, pagination) {
-  pagination.page = !pagination.page ? 0 : parseInt(pagination.page) - 1;
-  pagination.offset = pagination.offset ? parseInt(pagination.offset) : 20;
+async function getOperations(user, {from, to}, {page, offset}) {
+  page = !page ? 0 : parseInt(page) - 1;
+  offset = offset ? parseInt(offset) : 20;
 
-  const total = await Operation.countDocuments({
+  const query = {
     user: user.id,
     date: {
       '$gte': from,
       '$lt': to,
     }
-  });
-  const lastPage = Math.floor(total/pagination.offset);
-  if(pagination.page < 0) {
-    pagination.page = 0;
-  }
+  };
 
   const operations = await Operation
-    .find({
-      user: user.id,
-      date: {
-        '$gte': from,
-        '$lt': to,
-      }
-    })
+    .find(query)
     .sort({date: 'desc'})
-    .limit(pagination.offset)
-    .skip(pagination.page*pagination.offset)
+    .limit(offset)
+    .skip(page * offset)
     .lean().exec();
 
+  for(const i in operations) {
+    const subOperations = await SubOperation.find({operation: operations[i].id});
+    operations[i].subs = subOperations;
+  }
+
   return {
-    operations: operations.map((operation) => {
-      return transform(operation);
-    }),
-    pagination: {
-      total,
-      page: pagination.page+1,
-      pageSize: pagination.offset,
-      lastPage: lastPage+1,
-    }
+    operations: await transform(operations, 'Operation'),
+    pagination: await definePagination(query, page, offset)
   };
 }
 
@@ -111,11 +115,11 @@ async function persistMany(user, operations) {
         id,
         hash,
         user: user.id,
-      })
+      });
     }
   }
 
-  for(let i in operationsToSave) {
+  for(const i in operationsToSave) {
     await persist(user, operationsToSave[i]);
   }
   return operationsToSave.map(operation => transform(operation));
@@ -149,7 +153,7 @@ async function persist(user, operation) {
   const mongoValidate = ope.validateSync();
   if(mongoValidate) {
     const errors = [];
-    for(let i in mongoValidate.errors) {
+    for(const i in mongoValidate.errors) {
       errors.push({
         field: i,
         message: mongoValidate.errors[i].message,
@@ -163,10 +167,11 @@ async function persist(user, operation) {
 
 /**
  * @param operation
+ * @param subOperations
  * @return {{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string[]|string|*[])}}
  */
-function transform(operation) {
-  return {
+function transformLegacy(operation, subOperations) {
+  const returnOperation = {
     id: operation.id,
     label: operation.label,
     debit: operation.debit,
@@ -174,32 +179,46 @@ function transform(operation) {
     category: operation.category,
     date: operation.date,
     tags: operation.tags,
+    sub: [],
+  };
+
+  if(subOperations) {
+    for(const i in subOperations) {
+      returnOperation.sub.push({
+        label: subOperations[i].label,
+        date: subOperations[i].date,
+        debit: subOperations[i].debit,
+        credit: subOperations[i].credit,
+      });
+    }
   }
+
+  return returnOperation;
 }
 
 function getAggregateTotalRequest(from, to, matches) {
   return [
     {
-      "$match": {
+      '$match': {
         ...matches,
-        "date": {
-          "$gte": new Date(from),
-          "$lt": new Date(to)
+        'date': {
+          '$gte': new Date(from),
+          '$lt': new Date(to)
         }
       }
     },
-    {"$group" : {
-        "_id" : {"$dateFromParts": {"year": {"$year": "$date"}, "month": {"$month": "$date"}}},
-        "debit" : {"$sum" : "$debit"},
-        "credit": {"$sum" : "$credit"}
-      }},
-    {"$project": {
-        "_id": 0,
-        "ts": "$_id",
-        "debit": 1,
-        "credit": 1
-      }},
-    {"$sort": {"ts": 1}}
+    {'$group' : {
+      '_id' : {'$dateFromParts': {'year': {'$year': '$date'}, 'month': {'$month': '$date'}}},
+      'debit' : {'$sum' : '$debit'},
+      'credit': {'$sum' : '$credit'}
+    }},
+    {'$project': {
+      '_id': 0,
+      'ts': '$_id',
+      'debit': 1,
+      'credit': 1
+    }},
+    {'$sort': {'ts': 1}}
   ];
 }
 
@@ -212,30 +231,30 @@ function aggregateTotal(from, to, matches) {
 function aggregateByCategoryByDate(from, to, matches) {
   const request = [
     {
-      "$match": {
+      '$match': {
         ...matches,
-        "date": {
-          "$gte": new Date(from),
-          "$lt": new Date(to)
+        'date': {
+          '$gte': new Date(from),
+          '$lt': new Date(to)
         }
       }
     },
-    {"$group" : {
-      "_id" : {
-        "ts": {"$dateFromParts": {"year": {"$year": "$date"}, "month": {"$month": "$date"}}},
-        "category": "$category"
+    {'$group' : {
+      '_id' : {
+        'ts': {'$dateFromParts': {'year': {'$year': '$date'}, 'month': {'$month': '$date'}}},
+        'category': '$category'
       },
-      "debit" : {"$sum" : "$debit"},
-      "credit": {"$sum" : "$credit"}
+      'debit' : {'$sum' : '$debit'},
+      'credit': {'$sum' : '$credit'}
     }},
-    {"$project": {
-      "_id": 0,
-      "ts": "$_id.ts",
-      "debit": 1,
-      "credit": 1,
-      "category": "$_id.category",
+    {'$project': {
+      '_id': 0,
+      'ts': '$_id.ts',
+      'debit': 1,
+      'credit': 1,
+      'category': '$_id.category',
     }},
-    {"$sort": {"category": 1, "ts": 1}}
+    {'$sort': {'category': 1, 'ts': 1}}
   ];
 
   return doAggregateRequest(request);
@@ -257,5 +276,5 @@ function doAggregateRequest(request) {
           resolve(data);
         });
     });
-  })
+  });
 }
