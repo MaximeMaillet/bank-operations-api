@@ -4,7 +4,7 @@ const {transform} = require('../lib/transformers.js');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
-const {SubOperation} = require('../models/index');
+const {SubOperation, Operation} = require('../models/index');
 
 module.exports = {
   add,
@@ -139,15 +139,17 @@ async function updateOne(req, res, next) {
       });
     }
 
+    const operation = await Operation.findOne({id: req.bind.id});
+
     const {label, credit, debit, tags, date, category} = req.body;
-    req.bind.label = label ? label : req.bind.label;
-    req.bind.credit = credit ? credit : req.bind.credit;
-    req.bind.debit = debit ? debit : req.bind.debit;
-    req.bind.tags = tags ? tags : req.bind.tags;
-    req.bind.category = category ? category : req.bind.category;
-    req.bind.date = date ? moment(date) : moment(req.bind.date);
-    req.bind.save();
-    res.send((await transform(req.bind, 'Operation')));
+    operation.label = label ? label : operation.label;
+    operation.credit = credit ? credit : operation.credit;
+    operation.debit = debit ? debit : operation.debit;
+    operation.tags = tags ? tags : operation.tags;
+    operation.category = category ? category : operation.category;
+    operation.date = date ? moment(date) : moment(operation.date);
+    operation.save();
+    res.send((await transform(operation, 'Operation')));
   } catch(e) {
     next(e);
   }

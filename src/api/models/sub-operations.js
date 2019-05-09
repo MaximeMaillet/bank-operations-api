@@ -22,8 +22,10 @@ const operationSchema = new Schema({
     type: String,
     required: [true, 'Label is required'],
   },
-  debit: Number,
-  credit: Number,
+  total: {
+    type: Number,
+    required: [true, 'Total is required']
+  },
   tags: [String],
 });
 
