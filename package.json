@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src/api/api.js",
+    "start": "node src/routes.js",
     "fixtures": "node .data/fixtures/labels.js",
-    "api-dev": "nodemon --ignore web/* src/api/api.js",
+    "api-dev": "nodemon --ignore web/* src/routes.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

@@ -16,6 +16,8 @@ const db = mongoose.connection;
 mongoose.set('useCreateIndex', true);
 autoIncrement.initialize(db);
 
+console.log(path.resolve('.')+'/src/front/build');
+
 db.on('error', (err) => {
   console.log('Fail connecting to mongoDB');
   console.log(err);
@@ -92,12 +94,12 @@ db.once('open', () => {
                 controller: 'OperationController',
                 action: 'add',
                 '_middleware_': {
-                  controllers: [require('./middlewares/upload').csv]
+                  controllers: [require('./api/middlewares/upload').csv]
                 }
               },
               '/import': {
                 '_middleware_': {
-                  controllers: ['authenticate#auth', require('./middlewares/upload').json]
+                  controllers: ['authenticate#auth', require('./api/middlewares/upload').json]
                 },
                 post: 'OperationController#import'
               },
@@ -140,7 +142,13 @@ db.once('open', () => {
           '/annotations': {
             post: 'GraphController#annotations'
           }
-        }
+        },
+        '/': {
+          '_static_': {
+            'targets': ['src/front/build/'],
+            'options': {}
+          }
+        },
       }
     }
   ]);
