@@ -204,7 +204,8 @@ async function deleteOne(req, res, next) {
       });
     }
 
-    req.bind.remove();
+    await SubOperation.find({operation: req.bind.id}).remove().exec();
+    await Operation.deleteOne({id: req.bind.id});
     res.send({success:true});
   } catch(e) {
     next(e);
