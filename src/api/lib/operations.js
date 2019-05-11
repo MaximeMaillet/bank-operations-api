@@ -4,30 +4,76 @@ const {Operation, SubOperation} = require('../models');
 const {transform} = require('./transformers');
 
 module.exports = {
-  persistMany,
   persist,
+  validate,
   getOperations,
+  persistMany,
   getOperationsFromDate,
   aggregateByCategoryByDate,
   aggregateTotal,
   getAggregateTotalRequest,
 };
 
-const definePagination = async(query, page, offset) => {
-  const total = await Operation.countDocuments(query);
 
-  const lastPage = Math.floor(total/offset);
-  if(page < 0) {
-    page = 0;
+/**
+ *
+ * @param user
+ * @param operation
+ * @returns {Promise<{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string)}|*>}
+ */
+async function persist(user, operation) {
+  const operationsExists = await Operation.findOne({
+    hash: md5(operation.label+operation.date),
+    user: user.id,
+  });
+
+  if(!operation.label_raw) {
+    operation.label_raw = operation.label;
   }
 
-  return {
-    total,
-    page: page+1,
-    pageSize: offset,
-    lastPage: lastPage+1,
-  };
-};
+  if(operationsExists) {
+    validate(operation);
+    const newOperation = await Operation.updateOne({id: operationsExists.id}, operation, { new: true, runValidators: true });
+    return transform(newOperation, 'Operation');
+  }
+
+  const ope = new Operation({
+    ...operation,
+    user: user.id,
+    hash: md5(operation.label_raw+operation.date),
+  });
+
+  validate(ope);
+  await ope.save();
+  return transform(ope, 'Operation');
+}
+
+/**
+ * @param operation
+ * @returns {null}
+ */
+function validate(operation) {
+  const errors = {};
+
+  if((!operation.credit && !operation.debit) || (operation.credit === 0 && operation.debit === 0)) {
+    errors['credit'] = 'Credit is required';
+    errors['debit'] = 'Debit is required';
+  }
+
+  if(operation instanceof mongoose.Model) {
+    const mongoValidate = operation.validateSync();
+    for(const i in mongoValidate.errors) {
+      errors[i] = mongoValidate.errors[i].message;
+    }
+  }
+
+  if(Object.keys(errors).length > 0) {
+    throw errors;
+  }
+
+  return null;
+}
+
 
 /**
  * Return operation for user
@@ -66,6 +112,23 @@ async function getOperations(user, {from, to}, {page, offset}) {
   };
 }
 
+
+const definePagination = async(query, page, offset) => {
+  const total = await Operation.countDocuments(query);
+
+  const lastPage = Math.floor(total/offset);
+  if(page < 0) {
+    page = 0;
+  }
+
+  return {
+    total,
+    page: page+1,
+    pageSize: offset,
+    lastPage: lastPage+1,
+  };
+};
+
 async function getOperationsFromDate(user, {from, to}) {
   const operations = await Operation
     .find({
@@ -84,6 +147,7 @@ async function getOperationsFromDate(user, {from, to}) {
 }
 
 /**
+ * @deprecated
  * Persist many operations
  * @param user
  * @param operations
@@ -125,45 +189,6 @@ async function persistMany(user, operations) {
   return operationsToSave.map(operation => transform(operation));
 }
 
-/**
- *
- * @param user
- * @param operation
- * @returns {Promise<{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string)}|*>}
- */
-async function persist(user, operation) {
-  const operationsExists = await Operation.findOne({
-    hash: md5(operation.label+operation.date),
-    user: user.id,
-  });
-
-  if(operationsExists) {
-    return transform(operationsExists);
-  }
-
-  if(!operation.label_raw) {
-    operation.label_raw = operation.label;
-  }
-
-  const ope = new Operation({
-    ...operation,
-    user: user.id,
-    hash: md5(operation.label_raw+operation.date),
-  });
-  const mongoValidate = ope.validateSync();
-  if(mongoValidate) {
-    const errors = [];
-    for(const i in mongoValidate.errors) {
-      errors.push({
-        field: i,
-        message: mongoValidate.errors[i].message,
-      });
-    }
-    throw errors;
-  }
-  await ope.save();
-  return transform(ope);
-}
 
 /**
  * @param operation

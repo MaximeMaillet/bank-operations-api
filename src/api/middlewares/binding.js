@@ -17,9 +17,13 @@ async function bindOperation(req, res, next) {
       });
     }
 
-    req.bind = await transform(operation, 'Operation');
+    req.bind = {
+      operation: await transform(operation, 'Operation'),
+      model: operation,
+    };
+
     if(subOperations) {
-      req.bind.subs = await transform(subOperations, 'SubOperation');
+      req.bind.operation.subs = await transform(subOperations, 'SubOperation');
     }
 
     next();

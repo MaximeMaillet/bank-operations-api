@@ -52,8 +52,10 @@ async function split(req, res, next) {
     if(Object.values(errors).length > 0) {
       return res.status(422).send({
         message: 'Form unprocessable',
-        subs: errors
-      })
+        errors: {
+          subs: errors
+        }
+      });
     }
 
     res.send((await transform(req.bind, 'Operation')));

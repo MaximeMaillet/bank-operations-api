@@ -119,7 +119,7 @@ async function getFromUser(req, res, next) {
  */
 async function getOne(req, res, next) {
   try {
-    res.send((await transform(req.bind, 'Operation')));
+    res.send(req.bind.operation);
   } catch(e) {
     next(e);
   }
@@ -128,65 +128,50 @@ async function getOne(req, res, next) {
 /**
  * @param req
  * @param res
- * @param next
  * @return {Promise<*>}
  */
-async function updateOne(req, res, next) {
+async function updateOne(req, res) {
   try {
-    if(req.user.id !== req.bind.user) {
+    if(req.user.id !== req.bind.operation.user) {
       return res.status(403).send({
         message: 'You don\'t have permission'
       });
     }
 
-    const operation = await Operation.findOne({id: req.bind.id});
-
     const {label, credit, debit, tags, date, category} = req.body;
-    operation.label = label ? label : operation.label;
-    operation.credit = credit ? credit : operation.credit;
-    operation.debit = debit ? debit : operation.debit;
-    operation.tags = tags ? tags : operation.tags;
-    operation.category = category ? category : operation.category;
-    operation.date = date ? moment(date) : moment(operation.date);
-    operation.save();
-    res.send((await transform(operation, 'Operation')));
+    const operation = await persist(req.user, { label, credit, debit, tags, date, category});
+    res.send(operation);
   } catch(e) {
-    next(e);
+    res.status(422).send({
+      message: 'Form unprocessable',
+      errors: e
+    });
   }
 }
 
 /**
  * @param req
  * @param res
- * @param next
  * @returns {Promise<void>}
  */
-async function addOne(req, res, next) {
+async function addOne(req, res) {
   try {
     const {label, credit, debit, tags, date, category} = req.body;
-    let operation = {};
-    try {
-      operation = await persist(req.user, {
-        label,
-        label_raw: label,
-        credit,
-        debit,
-        tags,
-        category,
-        date
-      });
-    } catch(e) {
-      return res
-        .status(422)
-        .send({
-          message: 'Form is invalid',
-          errors: e
-        });
-    }
-
+    const operation = await persist(req.user, {
+      label,
+      label_raw: label,
+      credit,
+      debit,
+      tags,
+      category,
+      date
+    });
     res.send(operation);
   } catch(e) {
-    next(e);
+    res.status(422).send({
+      message: 'Form unprocessable',
+      errors: e
+    });
   }
 }
 
@@ -198,7 +183,7 @@ async function addOne(req, res, next) {
  */
 async function deleteOne(req, res, next) {
   try {
-    if(req.bind.user !== req.user.id) {
+    if(req.bind.operation.user !== req.user.id) {
       return res.status(403).send({
         message: 'You don\'t have permission'
       });
