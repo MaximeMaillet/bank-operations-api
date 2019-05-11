@@ -16,8 +16,6 @@ const db = mongoose.connection;
 mongoose.set('useCreateIndex', true);
 autoIncrement.initialize(db);
 
-console.log(path.resolve('.')+'/src/front/build');
-
 db.on('error', (err) => {
   console.log('Fail connecting to mongoDB');
   console.log(err);
@@ -141,12 +139,6 @@ db.once('open', () => {
           },
           '/annotations': {
             post: 'GraphController#annotations'
-          }
-        },
-        '/': {
-          '_static_': {
-            'targets': ['src/front/build/'],
-            'options': {}
           }
         },
       }
