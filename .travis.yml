@@ -10,7 +10,7 @@ services:
 script:
   - rm -rf src/front && git clone https://github.com/MaximeMaillet/bank-operations-front.git src/front
   - cd src/front && npm install && npm run build
-  - cd ../../ && nm install
+  - cd ../../ && npm install
   - docker build -t deuxmax/bank-operations:latest .
   - docker login -u $DOCKER_USER -p $DOCKER_PASS
   - docker push deuxmax/bank-operations:latest
