@@ -23,7 +23,7 @@ module.exports = {
  */
 async function persist(user, operation) {
   const operationsExists = await Operation.findOne({
-    hash: md5(operation.label+operation.date),
+    hash: md5(operation.label_raw+operation.date),
     user: user.id,
   });
 
@@ -49,6 +49,32 @@ async function persist(user, operation) {
 }
 
 /**
+ * @param user
+ * @param operations
+ * @returns {Promise<void>}
+ */
+async function persistMany(user, operations) {
+  const errors = [];
+  for(const i in operations) {
+    try {
+      await persist(user, operations[i]);
+    } catch(e) {
+      console.log(e)
+      errors.push({
+        operation: operations[i],
+        errors: e,
+      });
+    }
+  }
+
+  if(errors.length > 0) {
+    throw errors;
+  }
+
+  return operations;
+}
+
+/**
  * @param operation
  * @returns {null}
  */
@@ -62,8 +88,10 @@ function validate(operation) {
 
   if(operation instanceof mongoose.Model) {
     const mongoValidate = operation.validateSync();
-    for(const i in mongoValidate.errors) {
-      errors[i] = mongoValidate.errors[i].message;
+    if(mongoValidate) {
+      for(const i in mongoValidate.errors) {
+        errors[i] = mongoValidate.errors[i].message;
+      }
     }
   }
 
@@ -153,7 +181,7 @@ async function getOperationsFromDate(user, {from, to}) {
  * @param operations
  * @return {Promise}
  */
-async function persistMany(user, operations) {
+async function persistManyLegacy(user, operations) {
 
   const operationsExists = (await Operation.find({
     hash: { $in: operations.map(operation => md5(operation.label+operation.date))},

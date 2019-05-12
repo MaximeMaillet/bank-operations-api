@@ -2,6 +2,7 @@ require('dotenv').config();
 const fs = require('fs');
 const csv = require('csv-parser');
 const {Label} = require('../models');
+const moment = require('moment');
 
 let categories = [];
 
@@ -12,6 +13,7 @@ let categories = [];
  */
 module.exports.read = async(file) => {
   categories = await loadCategory();
+  console.log(categories)
   return readFile(file);
 };
 
@@ -47,7 +49,7 @@ function findCategory(categories, label) {
     }
   }
 
-  return null;
+  return '_none_';
 }
 
 /**
@@ -73,28 +75,28 @@ function readFile(file) {
         headers: ['date', 'libelle', 'debit', 'credit']
       }))
       .on('data', (data) => {
-        const arrayDate = data.date.replace(/\s/g, '').split('/');
-        const date = new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`);
-
-        if(!isNaN(date.getTime())) {
-          const credit = data.credit ? data.credit.replace(/\s/g, '').replace(/,/g, '.') : 0;
-          const debit = data.debit ? data.debit.replace(/\s/g, '').replace(/,/g, '.') : 0;
-          operations.push({
-            date: new Date(`${arrayDate[2]}-${arrayDate[1]}-${arrayDate[0]}`),
-            label: data.libelle.replace(/\s/g, ''),
-            label_str: cleanLibelle(data.libelle),
-            debit: debit ? parseFloat(debit) : 0,
-            credit: credit ? parseFloat(credit) : 0,
-            category: findCategory(categories, data.libelle),
-            category_2: findCategory(categories, cleanLibelle(data.libelle)),
-          });
+        const regex = new RegExp(/^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/i);
+        if(regex.test(data.date)) {
+          const date = moment(data.date, ['DD-MM-YYYY']);
+          if(date.isValid()) {
+            const credit = data.credit ? data.credit.replace(/\s/g, '').replace(/,/g, '.') : 0;
+            const debit = data.debit ? data.debit.replace(/\s/g, '').replace(/,/g, '.') : 0;
+            operations.push({
+              date: date.toDate(),
+              label: data.libelle,
+              label_raw: data.libelle.replace(/\s/g, ''),
+              debit: debit ? parseFloat(debit) : 0,
+              credit: credit ? parseFloat(credit) : 0,
+              category: findCategory(categories, data.libelle),
+            });
+          }
         }
       })
       .on('finish', () => {
         const missingOperations = operations
           .filter((operation) => operation.category === null)
           .map((operation) => `${operation.date} : ${operation.label} - ${operation.debit}`);
-        const verifiedOperations = operations.filter((operation) => operation.category !== null);
+        const verifiedOperations = operations;//.filter((operation) => operation.category !== null);
 
         resolve({missingOperations, verifiedOperations});
       })

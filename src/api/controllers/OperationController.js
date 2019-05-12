@@ -1,5 +1,5 @@
 const bankAccount = require('../lib/readBankAccount');
-const {persistMany, persist, getOperations} = require('../lib/operations');
+const {persistMany, validate, persist, getOperations} = require('../lib/operations');
 const {transform} = require('../lib/transformers.js');
 const fs = require('fs');
 const path = require('path');
@@ -7,8 +7,8 @@ const moment = require('moment');
 const {SubOperation, Operation} = require('../models/index');
 
 module.exports = {
-  add,
   import: _import,
+  importCsv,
   getFromUser,
   getOne,
   updateOne,
@@ -22,24 +22,29 @@ module.exports = {
  * @param next
  * @return {Promise<*>}
  */
-async function add(req, res, next) {
+async function importCsv(req, res, next) {
   try {
     if(!req.file) {
       return res.status(422).send({message: 'No CSV file founded'});
     }
 
-    const {missingOperations, verifiedOperations} = await bankAccount.read(req.file.path, false);
-    const operations = verifiedOperations.concat(missingOperations)
-      .map((operation) => {
-        return {
-          ...operation,
-          user: req.user.id
-        };
-      });
-    const saved = await persist(req.user, operations);
-    res.send(saved);
+    const {missingOperations, verifiedOperations} = await bankAccount.read(req.file.path);
+    // const operations = verifiedOperations.concat(missingOperations)
+    //   .map((operation) => {
+    //     return {
+    //       ...operation,
+    //       user: req.user.id
+    //     };
+    //   });
+
+    await persistMany(req.user, verifiedOperations);
+    res.send(verifiedOperations);
   } catch(e) {
-    next(e);
+    // console.log(e)
+    res.status(422).send({
+      message: 'Form is unprocessable',
+      errors: e,
+    })
   }
 }
 
@@ -189,8 +194,8 @@ async function deleteOne(req, res, next) {
       });
     }
 
-    await SubOperation.find({operation: req.bind.id}).remove().exec();
-    await Operation.deleteOne({id: req.bind.id});
+    await SubOperation.deleteMany({operation: req.bind.operation.id});
+    await Operation.deleteOne({id: req.bind.operation.id});
     res.send({success:true});
   } catch(e) {
     next(e);

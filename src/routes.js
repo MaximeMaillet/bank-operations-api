@@ -90,7 +90,7 @@ db.once('open', () => {
               post: 'OperationController#addOne',
               put: {
                 controller: 'OperationController',
-                action: 'add',
+                action: 'importCsv',
                 '_middleware_': {
                   controllers: [require('./api/middlewares/upload').csv]
                 }
@@ -140,7 +140,7 @@ db.once('open', () => {
           '/annotations': {
             post: 'GraphController#annotations'
           }
-        },
+        }
       }
     }
   ]);

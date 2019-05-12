@@ -1,20 +1,46 @@
 version: '3'
+
+networks:
+  bank-nginx:
+    external:
+      name: ${NGINX_NETWORK_NAME}
+
+  bank-mongo:
+    external:
+      name: ${MONGO_NETWORK_NAME}
+
+volumes:
+  front:
+
 services:
+  nginx:
+    image: nginx:1.15
+    ports:
+      - 8080:80
+    volumes:
+      - ./Docker/nginx/conf.d/dev.conf:/etc/nginx/conf.d/default.conf
+      - ./Docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - front:/var/app/
+    networks:
+      - bank-nginx
+
   api:
     image: deuxmax/bank-operations:latest
-    depends_on:
-      - mongo
     environment:
       APP_PORT: 8080
       MONGO_HOST: mongodb://mongo:27017
       WAIT_HOSTS: mongo:27017
       CORS_DOMAIN: ${CORS_DOMAIN}
-    links:
-      - mongo
+    networks:
+      - bank-nginx
+      - bank-mongo
     volumes:
       - ${STORAGE}/keys:/var/app/keys
+      - front:/var/app/src/front/build
 
   mongo:
     image: mongo:latest
     volumes:
       - ${STORAGE}/mongodb:/data/db
+    networks:
+      - bank-mongo
