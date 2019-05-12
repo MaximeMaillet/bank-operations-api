@@ -143,8 +143,8 @@ async function updateOne(req, res) {
       });
     }
 
-    const {label, credit, debit, tags, date, category} = req.body;
-    const operation = await persist(req.user, { label, credit, debit, tags, date, category});
+    const {label, credit, debit, tags, date, category, id} = req.body;
+    const operation = await persist(req.user, { label, credit, debit, tags, date, category, id});
     res.send(operation);
   } catch(e) {
     res.status(422).send({

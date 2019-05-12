@@ -22,10 +22,18 @@ module.exports = {
  * @returns {Promise<{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string)}|*>}
  */
 async function persist(user, operation) {
-  const operationsExists = await Operation.findOne({
-    hash: md5(operation.label_raw+operation.date),
-    user: user.id,
-  });
+  let operationsExists = null;
+  if(operation.id) {
+    operationsExists = await Operation.findOne({
+      id: operation.id,
+      user: user.id,
+    });
+  } else {
+    operationsExists = await Operation.findOne({
+      hash: md5(operation.label_raw+operation.date),
+      user: user.id,
+    });
+  }
 
   if(!operation.label_raw) {
     operation.label_raw = operation.label;
