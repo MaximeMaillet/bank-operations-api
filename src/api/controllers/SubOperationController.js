@@ -15,16 +15,16 @@ async function split(req, res, next) {
     });
 
     if(
-      (req.bind.debit && req.bind.debit > 0 && req.bind.debit !== total) ||
-      (req.bind.credit && req.bind.credit > 0 && req.bind.credit !== total)
+      (req.bind.operation.debit && req.bind.operation.debit > 0 && req.bind.operation.debit !== total) ||
+      (req.bind.operation.credit && req.bind.operation.credit > 0 && req.bind.operation.credit !== total)
     ) {
       return res.status(422).send({
         message: 'Sum of money not corresponding'
       });
     }
 
-    await SubOperation.find({operation: req.bind.id}).remove().exec();
-    req.bind.subs = [];
+    await SubOperation.find({operation: req.bind.operation.id}).remove().exec();
+    req.bind.operation.subs = [];
 
     const errors = {};
 
@@ -32,10 +32,10 @@ async function split(req, res, next) {
       try {
         const newSubOperation = new SubOperation({
           ...subs[i],
-          operation: req.bind.id,
+          operation: req.bind.operation.id,
         });
         await newSubOperation.save();
-        req.bind.subs.push(newSubOperation);
+        req.bind.operation.subs.push(newSubOperation);
       } catch(e) {
         if(e.name === 'ValidationError') {
           errors[i] = {};
