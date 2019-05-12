@@ -42,5 +42,6 @@ services:
     image: mongo:latest
     volumes:
       - ${STORAGE}/mongodb:/data/db
+      - ${STORAGE}/backups/database:/backups
     networks:
       - bank-mongo
