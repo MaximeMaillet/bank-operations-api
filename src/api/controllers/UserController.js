@@ -54,6 +54,33 @@ async function create(req, res, next) {
   }
 }
 
+async function update(req, res, next) {
+  try {
+    res.status(403).send({
+      message: 'This feature does not exists yet',
+    });
+  } catch(e) {
+    next(e);
+  }
+}
+
+async function getMy(req, res, next) {
+  try {
+    res.send({
+      id: req.user.id,
+      username: req.user.username,
+    });
+  } catch(e) {
+    next(e);
+  }
+}
+
+/**
+ * @param req
+ * @param res
+ * @param next
+ * @returns {Promise<*>}
+ */
 async function login(req, res, next) {
   try {
     const {username, password} = req.body;
@@ -104,27 +131,6 @@ async function login(req, res, next) {
     res.send({
       user: userData,
       token
-    });
-  } catch(e) {
-    next(e);
-  }
-}
-
-async function update(req, res, next) {
-  try {
-    res.status(403).send({
-      message: 'This feature does not exists yet',
-    });
-  } catch(e) {
-    next(e);
-  }
-}
-
-async function getMy(req, res, next) {
-  try {
-    res.send({
-      id: req.user.id,
-      username: req.user.username,
     });
   } catch(e) {
     next(e);
