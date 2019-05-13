@@ -1,16 +1,14 @@
+require('dotenv').config();
 const cors = require('cors');
+const whitelist = process.env.CORS_DOMAIN.split(',');
 
-const whiteList = ['http://localhost', 'http://localhost:3000']
-
-module.exports = cors({
+module.exports.apply = cors({
   origin: function(origin, callback) {
-
-    if(!origin) return callback(null, true);
-    if(whiteList.indexOf(origin) === -1){
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(null, true);
   },
-  exposedHeaders: ['Content-Type', 'Content-Length', 'X-Foo', 'X-Bar'],
+  allowedHeaders: ['Authorization', 'Content-Type', 'Origin', 'Referer', 'User-Agent', '*']
 });

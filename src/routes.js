@@ -7,7 +7,6 @@ const path = require('path');
 const autoIncrement = require('mongoose-auto-increment');
 
 const app = express();
-const cors = require('cors');
 router(app);
 router.enableDebug();
 
@@ -41,30 +40,21 @@ db.on('error', (err) => {
 db.once('open', () => {
   console.log('Mongoose connection OK');
 
-  const whitelist = process.env.CORS_DOMAIN.split(',');
-  app.use(cors({
-    origin: function(origin, callback) {
-      if (!origin || whitelist.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    allowedHeaders: ['Authorization', 'Content-Type', 'Origin', 'Referer', 'User-Agent', '*']
-  }));
-
   router.route([
     {
       controllers: `${path.resolve('.')}/src/api/controllers`,
       middlewares: `${path.resolve('.')}/src/api/middlewares`,
       routes: {
         '/api': {
+          '_middleware_': [
+            {
+              controllers: ['cors#apply', bodyParser.json()],
+              level: router.MIDDLEWARE_LEVEL.GLOBAL,
+              inheritance: 'descending',
+            }
+          ],
           '/users': {
             '_middleware_': [
-              {
-                method: router.METHOD.ALL,
-                controllers: [bodyParser.json()]
-              },
               {
                 controllers: ['authenticate#auth'],
                 method: [router.METHOD.GET, router.METHOD.PATCH],
@@ -74,18 +64,15 @@ db.once('open', () => {
             get: 'UserController#getMy',
             patch: 'UserController#update',
             '/login': {
-              post: {
-                controller: 'UserController',
-                action: 'login',
-                _middleware_: {
-                  controllers: [bodyParser.json()]
-                },
-              },
+              post: 'UserController#login',
             },
             '/operations': {
-              '_middleware_': {
-                controllers: ['authenticate#auth', bodyParser.json()]
-              },
+              '_middleware_': [
+                {
+                  controllers: ['authenticate#auth'],
+                  inheritance: 'descending',
+                },
+              ],
               get: 'OperationController#getFromUser',
               post: 'OperationController#addOne',
               put: {
@@ -97,35 +84,41 @@ db.once('open', () => {
               },
               '/import': {
                 '_middleware_': {
-                  controllers: ['authenticate#auth', require('./api/middlewares/upload').json]
+                  controllers: [require('./api/middlewares/upload').json]
                 },
                 post: 'OperationController#import'
               },
               '/:id(\\d+)': {
                 _middleware_: {
-                  controllers: ['authenticate#auth', 'binding#bindOperation', bodyParser.json()]
+                  controllers: ['binding#bindOperation']
                 },
                 patch: 'OperationController#updateOne',
                 get: 'OperationController#getOne',
                 delete: 'OperationController#deleteOne',
                 '/sub_operations': {
                   _middleware_: {
-                    controllers: ['authenticate#auth', 'binding#bindOperation', bodyParser.json()]
+                    controllers: ['binding#bindOperation']
                   },
                   post: 'SubOperationController#split'
                 }
               }
             },
             '/categories': {
-              '_middleware_': {
-                controllers: ['authenticate#auth']
-              },
+              '_middleware_': [
+                {
+                  controllers: ['authenticate#auth'],
+                  inheritance: 'descending',
+                },
+              ],
               get: 'CategoryController#getFromUser'
             },
             '/statistics': {
-              '_middleware_': {
-                controllers: ['authenticate#auth']
-              },
+              '_middleware_': [
+                {
+                  controllers: ['authenticate#auth'],
+                  inheritance: 'descending',
+                },
+              ],
               get: 'StatisticsController#getStats'
             }
           },
