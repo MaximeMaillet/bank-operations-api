@@ -14,7 +14,41 @@ module.exports = {
   updateOne,
   deleteOne,
   addOne,
+  getMissings,
 };
+
+/**
+ * @param req
+ * @param res
+ * @param next
+ * @returns {Promise<void>}
+ */
+async function getMissings(req, res, next) {
+  try {
+    let {from, to, page, offset} = req.query;
+    if(!to && req.user.lastOperationDate) {
+      to = moment(req.user.lastOperationDate).add(1, 'day').startOf('day').format('YYYY-MM-DD[T]HH:mm:ss');
+    }
+
+    if(!from && req.user.firstOperationDate) {
+      from = moment(req.user.firstOperationDate).startOf('day').format('YYYY-MM-DD[T]HH:mm:ss');
+    }
+
+    if(!offset) {
+      offset = 20;
+    }
+
+    if(!page) {
+      page = 1;
+    }
+
+    const operations = await getOperations(req.user, {from, to}, {page, offset}, {category: '_none_'});
+
+    res.send(operations);
+  } catch(e) {
+    next(e);
+  }
+}
 
 /**
  * @param req
@@ -29,6 +63,7 @@ async function importCsv(req, res, next) {
     }
 
     const {missingOperations, verifiedOperations} = await bankAccount.read(req.file.path);
+    console.log(missingOperations);
     // const operations = verifiedOperations.concat(missingOperations)
     //   .map((operation) => {
     //     return {
@@ -37,7 +72,7 @@ async function importCsv(req, res, next) {
     //     };
     //   });
 
-    await persistMany(req.user, verifiedOperations);
+    // await persistMany(req.user, verifiedOperations);
     res.send(verifiedOperations);
   } catch(e) {
     // console.log(e)

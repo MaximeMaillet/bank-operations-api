@@ -101,6 +101,9 @@ db.once('open', () => {
                   },
                   post: 'SubOperationController#split'
                 }
+              },
+              '/missings': {
+                get: 'OperationController#getMissings'
               }
             },
             '/categories': {
@@ -120,6 +123,21 @@ db.once('open', () => {
                 },
               ],
               get: 'StatisticsController#getStats'
+            },
+            '/labels': {
+              '_middleware_': [{
+                controllers: ['authenticate#auth']
+              }],
+              get: 'LabelController#getAllForUser',
+              put: 'LabelController#putForUser',
+              '/:id': {
+                '_middleware_': [{
+                  controllers: ['authenticate#auth', 'binding#bindLabel']
+                }],
+                get: 'LabelController#getOneForUser',
+                patch: 'LabelController#patchForUser',
+                delete: 'LabelController#deleteForUser',
+              }
             }
           },
         },
@@ -142,3 +160,4 @@ db.once('open', () => {
     console.log(`listening on port ${process.env.APP_PORT}`);
   });
 });
+

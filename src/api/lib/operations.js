@@ -114,20 +114,23 @@ function validate(operation) {
 /**
  * Return operation for user
  * @param user
+ * @param _query
  * @param dates
  * @param pagination
  * @return {Promise<*>}
  */
-async function getOperations(user, {from, to}, {page, offset}) {
+async function getOperations(user, {from, to}, {page, offset}, _query) {
   page = !page ? 0 : parseInt(page) - 1;
   offset = offset ? parseInt(offset) : 20;
+  _query = _query || {};
 
   const query = {
     user: user.id,
     date: {
       '$gte': from,
       '$lt': to,
-    }
+    },
+    ..._query,
   };
 
   const operations = await Operation
