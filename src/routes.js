@@ -46,15 +46,15 @@ db.once('open', () => {
       middlewares: `${path.resolve('.')}/src/api/middlewares`,
       routes: {
         '/api': {
-          '_middleware_': [
+          [router.IMP.MIDDLEWARE]: [
             {
               controllers: ['cors#apply', bodyParser.json()],
-              level: router.MIDDLEWARE_LEVEL.GLOBAL,
-              inheritance: 'descending',
+              level: router.MIDDLEWARE.LEVEL.GLOBAL,
+              inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
             }
           ],
           '/users': {
-            '_middleware_': [
+            [router.IMP.MIDDLEWARE]: [
               {
                 controllers: ['authenticate#auth'],
                 method: [router.METHOD.GET, router.METHOD.PATCH],
@@ -67,10 +67,10 @@ db.once('open', () => {
               post: 'UserController#login',
             },
             '/operations': {
-              '_middleware_': [
+              [router.IMP.MIDDLEWARE]: [
                 {
                   controllers: ['authenticate#auth'],
-                  inheritance: 'descending',
+                  inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
                 },
               ],
               get: 'OperationController#getFromUser',
@@ -89,17 +89,15 @@ db.once('open', () => {
                 post: 'OperationController#import'
               },
               '/:id(\\d+)': {
-                _middleware_: {
-                  controllers: ['binding#bindOperation']
+                [router.IMP.MIDDLEWARE]: {
+                  controllers: ['binding#bindOperation'],
+                  inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
                 },
                 patch: 'OperationController#updateOne',
                 get: 'OperationController#getOne',
                 delete: 'OperationController#deleteOne',
-                '/sub_operations': {
-                  _middleware_: {
-                    controllers: ['binding#bindOperation']
-                  },
-                  post: 'SubOperationController#split'
+                '/split': {
+                  post: 'OperationController#split'
                 }
               },
               '/missings': {

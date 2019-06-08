@@ -33,7 +33,6 @@ const operationSchema = new Schema({
     required: [true, 'Category is required']
   },
   tags: [String],
-  subs: [{type: Number, ref: 'Operation',}]
 });
 
 operationSchema.plugin(autoIncrement.plugin, { model: 'Operations', field: 'id', startAt: 1 });

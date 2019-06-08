@@ -5,4 +5,5 @@ module.exports = {
   Label: mongoose.model('Label', require('./labels')),
   User: mongoose.model('User', require('./user')),
   SubOperation: mongoose.model('SubOperation', require('./sub-operations')),
+  History: mongoose.model('History', require('./history')),
 };

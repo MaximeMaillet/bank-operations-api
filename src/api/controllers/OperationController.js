@@ -1,5 +1,6 @@
 const bankAccount = require('../lib/readBankAccount');
 const {persistMany, validate, persist, getOperations} = require('../lib/operations');
+const {add} = require('../lib/history');
 const {transform} = require('../lib/transformers.js');
 const fs = require('fs');
 const path = require('path');
@@ -15,6 +16,7 @@ module.exports = {
   deleteOne,
   addOne,
   getMissings,
+  split,
 };
 
 /**
@@ -240,6 +242,59 @@ async function deleteOne(req, res, next) {
     await SubOperation.deleteMany({operation: req.bind.operation.id});
     await Operation.deleteOne({id: req.bind.operation.id});
     res.send({success:true});
+  } catch(e) {
+    next(e);
+  }
+}
+
+/**
+ * @param req
+ * @param res
+ * @param next
+ * @returns {Promise<*>}
+ */
+async function split(req, res, next) {
+  try {
+    const {subs} = req.body;
+    let total = 0;
+
+    subs.map((item) => {
+      total += parseFloat(item.total);
+    });
+
+    if(
+      (req.bind.operation.debit && req.bind.operation.debit > 0 && req.bind.operation.debit !== total) ||
+      (req.bind.operation.credit && req.bind.operation.credit > 0 && req.bind.operation.credit !== total)
+    ) {
+      return res.status(422).send({
+        message: 'Sum of money not corresponding'
+      });
+    }
+
+    let label = '';
+
+    for(const i in subs) {
+      const newOperation = await persist(req.user, {
+        date: subs[i].date,
+        label: subs[i].label,
+        credit: req.bind.operation.credit ? subs[i].total : 0,
+        debit: req.bind.operation.debit ? subs[i].total : 0,
+        tags: subs[i].tags,
+        category: req.bind.operation.category,
+      });
+      label += `[${newOperation.id}] ${newOperation.label} with ${newOperation.credit}€ / ${newOperation.debit}€ && `;
+    }
+
+    await Operation.find({id: req.bind.operation.id}).remove().exec();
+
+    await add(
+      req.bind.operation,
+      'split',
+      `${req.bind.operation.label} with ${req.bind.operation.credit}€ / ${req.bind.operation.debit}€`,
+      label
+    );
+
+    res.send();
   } catch(e) {
     next(e);
   }
