@@ -58,6 +58,7 @@ db.once('open', () => {
               {
                 controllers: ['authenticate#auth'],
                 method: [router.METHOD.GET, router.METHOD.PATCH],
+                inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
               }
             ],
             put: 'UserController#create',
@@ -76,14 +77,14 @@ db.once('open', () => {
               get: 'OperationController#getFromUser',
               post: 'OperationController#addOne',
               put: {
+                [router.IMP.MIDDLEWARE]: {
+                  controllers: [require('./api/middlewares/upload').csv]
+                },
                 controller: 'OperationController',
                 action: 'importCsv',
-                '_middleware_': {
-                  controllers: [require('./api/middlewares/upload').csv]
-                }
               },
               '/import': {
-                '_middleware_': {
+                [router.IMP.MIDDLEWARE]: {
                   controllers: [require('./api/middlewares/upload').json]
                 },
                 post: 'OperationController#import'
@@ -105,32 +106,34 @@ db.once('open', () => {
               }
             },
             '/categories': {
-              '_middleware_': [
+              [router.IMP.MIDDLEWARE]: [
                 {
                   controllers: ['authenticate#auth'],
-                  inheritance: 'descending',
+                  inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
                 },
               ],
               get: 'CategoryController#getFromUser'
             },
             '/statistics': {
-              '_middleware_': [
+              [router.IMP.MIDDLEWARE]: [
                 {
                   controllers: ['authenticate#auth'],
-                  inheritance: 'descending',
+                  inheritance: router.MIDDLEWARE.INHERITANCE.DESC,
                 },
               ],
               get: 'StatisticsController#getStats'
             },
             '/labels': {
-              '_middleware_': [{
-                controllers: ['authenticate#auth']
-              }],
+              [router.IMP.MIDDLEWARE]: {
+                controllers: ['authenticate#auth', require('./api/middlewares/upload').json],
+                method: router.METHOD.POST,
+              },
+              post: 'LabelController#importForUser',
               get: 'LabelController#getAllForUser',
               put: 'LabelController#putForUser',
               '/:id': {
-                '_middleware_': [{
-                  controllers: ['authenticate#auth', 'binding#bindLabel']
+                [router.IMP.MIDDLEWARE]: [{
+                  controllers: ['binding#bindLabel']
                 }],
                 get: 'LabelController#getOneForUser',
                 patch: 'LabelController#patchForUser',

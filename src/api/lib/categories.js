@@ -1,13 +1,12 @@
 const {Operation} = require('../models');
 
 module.exports = {
-	get,
+  get,
 };
 
 async function get() {
-
-	return Operation
-		.find({})
-		.distinct('category')
-		.lean().exec();
+  return Operation
+    .find({})
+    .distinct('category')
+    .lean().exec();
 }

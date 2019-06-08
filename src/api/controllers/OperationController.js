@@ -71,11 +71,10 @@ async function importCsv(req, res, next) {
       missing_operations: missingOperations,
     });
   } catch(e) {
-    // console.log(e)
     res.status(422).send({
       message: 'Form is unprocessable',
       errors: e,
-    })
+    });
   }
 }
 
