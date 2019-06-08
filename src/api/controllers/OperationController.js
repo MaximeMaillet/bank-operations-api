@@ -5,7 +5,7 @@ const {transform} = require('../lib/transformers.js');
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
-const {SubOperation, Operation} = require('../models/index');
+const {Operation} = require('../models/index');
 
 module.exports = {
   import: _import,
@@ -239,7 +239,6 @@ async function deleteOne(req, res, next) {
       });
     }
 
-    await SubOperation.deleteMany({operation: req.bind.operation.id});
     await Operation.deleteOne({id: req.bind.operation.id});
     res.send({success:true});
   } catch(e) {

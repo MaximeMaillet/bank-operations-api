@@ -1,4 +1,4 @@
-const {User, Operation, SubOperation, Label} = require('../models');
+const {User, Operation, Label} = require('../models');
 const {transform} = require('../lib/transformers');
 
 module.exports = {
@@ -10,7 +10,6 @@ module.exports = {
 async function bindOperation(req, res, next) {
   try {
     const operation = await Operation.findOne({id: req.params.id});
-    const subOperations = await SubOperation.find({operation: req.params.id});
 
     if(!operation) {
       return res.status(404).send({
@@ -22,10 +21,6 @@ async function bindOperation(req, res, next) {
       operation: await transform(operation, 'Operation'),
       model: operation,
     };
-
-    if(subOperations) {
-      req.bind.operation.subs = await transform(subOperations, 'SubOperation');
-    }
 
     next();
   } catch(e) {

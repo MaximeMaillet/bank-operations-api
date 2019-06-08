@@ -7,5 +7,4 @@ module.exports = [
   'category',
   'date',
   'tags',
-  {key: 'subs', type: 'SubOperation', default: []},
 ];

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const md5 = require('md5');
-const {Operation, SubOperation} = require('../models');
+const {Operation} = require('../models');
 const {transform} = require('./transformers');
 
 module.exports = {
@@ -140,11 +140,6 @@ async function getOperations(user, {from, to}, {page, offset}, _query) {
     .skip(page * offset)
     .lean().exec();
 
-  for(const i in operations) {
-    const subOperations = await SubOperation.find({operation: operations[i].id});
-    operations[i].subs = subOperations;
-  }
-
   return {
     operations: await transform(operations, 'Operation'),
     pagination: await definePagination(query, page, offset)
@@ -226,38 +221,6 @@ async function persistManyLegacy(user, operations) {
     await persist(user, operationsToSave[i]);
   }
   return operationsToSave.map(operation => transform(operation));
-}
-
-
-/**
- * @param operation
- * @param subOperations
- * @return {{date: *, id: *, label: *, debit: (*|$group.debit|{$sum}|number|NumberConstructor), credit: (*|$group.credit|{$sum}|number|NumberConstructor), category: *, user: *, tags: (*|*[]|string[]|string[]|string|*[])}}
- */
-function transformLegacy(operation, subOperations) {
-  const returnOperation = {
-    id: operation.id,
-    label: operation.label,
-    debit: operation.debit,
-    credit: operation.credit,
-    category: operation.category,
-    date: operation.date,
-    tags: operation.tags,
-    sub: [],
-  };
-
-  if(subOperations) {
-    for(const i in subOperations) {
-      returnOperation.sub.push({
-        label: subOperations[i].label,
-        date: subOperations[i].date,
-        debit: subOperations[i].debit,
-        credit: subOperations[i].credit,
-      });
-    }
-  }
-
-  return returnOperation;
 }
 
 function getAggregateTotalRequest(from, to, matches) {
