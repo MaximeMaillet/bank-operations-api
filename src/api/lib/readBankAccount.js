@@ -8,36 +8,30 @@ let categories = [];
 
 /**
  * Read CSV file
+ * @param user
  * @param file
  * @return {Promise<*|Promise<any>>}
  */
-module.exports.read = async(file) => {
-  categories = await loadCategory();
-  console.log(categories)
+module.exports.read = async(user, file) => {
+  categories = await Label.find({user: user.id});
   return readFile(file);
 };
 
 /**
- * Load category from DB
- * @return {Promise}
- */
-function loadCategory() {
-  return Label.find({});
-}
-
-/**
  * Find category
- * @param categories
  * @param label
  * @return {null|*}
  */
-function findCategory(categories, label) {
+function findCategory(label) {
+  label = label.replace(/\s/g, '');
   for(let i=0; i<categories.length; i++) {
     for(let j=0; j<categories[i].match.length; j++) {
-      if(label.replace(/\s/g, '').match(categories[i].match[j])) {
+      const regExp = new RegExp(categories[i].match[j]);
+      if(regExp.test(label.replace(/\s/g, ''))) {
         return categories[i].label;
       }
     }
+
     const {keywords} = categories[i];
     if(keywords.length > 0) {
       const arrayLabel = cleanLabel(label);
@@ -87,18 +81,17 @@ function readFile(file) {
               label_raw: data.libelle.replace(/\s/g, ''),
               debit: debit ? parseFloat(debit) : 0,
               credit: credit ? parseFloat(credit) : 0,
-              category: findCategory(categories, data.libelle),
+              category: findCategory(data.libelle),
             });
           }
         }
       })
       .on('finish', () => {
         const missingOperations = operations
-          .filter((operation) => operation.category === null)
+          .filter((operation) => operation.category === '_none_')
           .map((operation) => `${operation.date} : ${operation.label} - ${operation.debit}`);
-        const verifiedOperations = operations;//.filter((operation) => operation.category !== null);
 
-        resolve({missingOperations, verifiedOperations});
+        resolve({missingOperations, verifiedOperations: operations});
       })
       .on('error', (err) => {
         reject(err);

@@ -64,18 +64,12 @@ async function importCsv(req, res, next) {
       return res.status(422).send({message: 'No CSV file founded'});
     }
 
-    const {missingOperations, verifiedOperations} = await bankAccount.read(req.file.path);
-    console.log(missingOperations);
-    // const operations = verifiedOperations.concat(missingOperations)
-    //   .map((operation) => {
-    //     return {
-    //       ...operation,
-    //       user: req.user.id
-    //     };
-    //   });
-
-    // await persistMany(req.user, verifiedOperations);
-    res.send(verifiedOperations);
+    const {missingOperations, verifiedOperations} = await bankAccount.read(req.user, req.file.path);
+    await persistMany(req.user, verifiedOperations);
+    res.send({
+      verified_operations:verifiedOperations,
+      missing_operations: missingOperations,
+    });
   } catch(e) {
     // console.log(e)
     res.status(422).send({
