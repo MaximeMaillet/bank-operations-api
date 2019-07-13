@@ -23,6 +23,8 @@ module.exports = {
  */
 async function persist(user, operation) {
   let operationsExists = null;
+  const price = operation.credit ? operation.credit : operation.debit;
+
   if(operation.id) {
     operationsExists = await Operation.findOne({
       id: operation.id,
@@ -30,7 +32,7 @@ async function persist(user, operation) {
     });
   } else {
     operationsExists = await Operation.findOne({
-      hash: md5(operation.label_raw+operation.date),
+      hash: md5(operation.label_raw+operation.date+price),
       user: user.id,
     });
   }
@@ -48,7 +50,7 @@ async function persist(user, operation) {
   const ope = new Operation({
     ...operation,
     user: user.id,
-    hash: md5(operation.label_raw+operation.date),
+    hash: md5(operation.label_raw+operation.date+price),
   });
 
   validate(ope);
@@ -188,9 +190,8 @@ async function getOperationsFromDate(user, {from, to}) {
  * @return {Promise}
  */
 async function persistManyLegacy(user, operations) {
-
   const operationsExists = (await Operation.find({
-    hash: { $in: operations.map(operation => md5(operation.label+operation.date))},
+    hash: { $in: operations.map(operation => md5(operation.label+operation.date+(operation.credit ? operation.credit : operation.debit)))},
     user: user.id,
   })
     .lean()
@@ -205,7 +206,8 @@ async function persistManyLegacy(user, operations) {
 
   const operationsToSave = [];
   for(const i in operations) {
-    const hash = md5(operations[i].label+operations[i].date);
+    const price = operations[i].credit ? operations[i].credit : operations[i].debit;
+    const hash = md5(operations[i].label+operations[i].date+price);
     if(operationsExists.indexOf(hash) === -1) {
       id++;
       operationsToSave.push({
